@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block title %}Réservations - VoyagesDZ{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2><i class="fas fa-calendar"></i> Réservations</h2>
+        <hr>
+    </div>
+</div>
+
+<!-- Statistiques -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="text-muted">Total</h6>
+                <h3>{{ stats.total }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="text-muted">En Attente</h6>
+                <h3>{{ stats.pending }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="text-muted">Confirmées</h6>
+                <h3>{{ stats.confirmed }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="text-muted">Annulées</h6>
+                <h3>{{ stats.cancelled }}</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Actions -->
+{% if can_create %}
+<div class="row mb-3">
+    <div class="col-12">
+        <a href="{{ url_for('bookings.create') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Nouvelle Réservation
+        </a>
+    </div>
+</div>
+{% endif %}
+
+<!-- Table -->
+<div class="row">
+    <div class="col-12">
+        <table class="table table-hover">
+            <thead class="table-dark">
+                <tr>
+                    <th>Référence</th>
+                    <th>Client</th>
+                    <th>Type</th>
+                    <th>Date Voyage</th>
+                    <th>Voyageurs</th>
+                    <th>Montant</th>
+                    <th>Statut</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for booking in bookings %}
+                <tr>
+                    <td><strong>{{ booking.booking_reference }}</strong></td>
+                    <td>{{ booking.client.first_name }} {{ booking.client.last_name }}</td>
+                    <td>{{ booking.booking_type }}</td>
+                    <td>{{ booking.travel_date }}</td>
+                    <td>{{ booking.number_of_travelers }}</td>
+                    <td>{{ "{:,.2f}".format(booking.total_amount_dzd) }} DZD</td>
+                    <td>
+                        <span class="badge bg-{{ 'warning' if booking.status == 'pending' else 'success' if booking.status == 'confirmed' else 'danger' if booking.status == 'cancelled' else 'secondary' }}">
+                            {{ booking.status }}
+                        </span>
+                    </td>
+                    <td>
+                        <a href="{{ url_for('bookings.detail', booking_id=booking.id) }}" class="btn btn-sm btn-info">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        <!-- Pagination -->
+        <nav>
+            <ul class="pagination">
+                {% if pagination.has_prev %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('bookings.list', page=pagination.prev_num) }}">Précédent</a>
+                </li>
+                {% endif %}
+                
+                {% for page_num in range(1, pagination.pages + 1) %}
+                    {% if page_num <= 3 or page_num > pagination.pages - 3 or (page_num >= pagination.page - 1 and page_num <= pagination.page + 1) %}
+                    <li class="page-item {{ 'active' if page_num == pagination.page else '' }}">
+                        <a class="page-link" href="{{ url_for('bookings.list', page=page_num) }}">{{ page_num }}</a>
+                    </li>
+                    {% elif page_num == 4 or page_num == pagination.pages - 3 %}
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if pagination.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('bookings.list', page=pagination.next_num) }}">Suivant</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        
+        <p class="text-muted">
+            Page {{ pagination.page }} sur {{ pagination.pages }} 
+            ({{ pagination.total }} résultats)
+        </p>
+    </div>
+</div>
+{% endblock %}

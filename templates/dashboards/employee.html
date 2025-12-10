@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard Employé - VoyagesDZ{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2><i class="fas fa-dashboard"></i> Dashboard Employé</h2>
+        <p class="text-muted">Bienvenue {{ current_user.full_name }}</p>
+        <hr>
+    </div>
+</div>
+
+<!-- Statistiques -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <h5>Mes Réservations</h5>
+                <h2>{{ stats.total_bookings }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <h5>Ce Mois</h5>
+                <h2>{{ stats.this_month }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <h5>En Attente</h5>
+                <h2>{{ stats.pending }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <h5>Confirmées</h5>
+                <h2>{{ stats.confirmed }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Actions rapides -->
+<div class="row mb-4">
+    <div class="col-12">
+        <h4>Actions Rapides</h4>
+        <a href="{{ url_for('bookings.create') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Nouvelle Réservation
+        </a>
+        <a href="{{ url_for('bookings.list') }}" class="btn btn-secondary">
+            <i class="fas fa-list"></i> Toutes Mes Réservations
+        </a>
+        <a href="{{ url_for('clients.list') }}" class="btn btn-info">
+            <i class="fas fa-users"></i> Mes Clients
+        </a>
+    </div>
+</div>
+
+<!-- Dernières réservations -->
+<div class="row">
+    <div class="col-12">
+        <h4>Mes Dernières Réservations</h4>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Référence</th>
+                    <th>Client</th>
+                    <th>Date Voyage</th>
+                    <th>Montant</th>
+                    <th>Statut</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for booking in recent_bookings %}
+                <tr>
+                    <td>{{ booking.booking_reference }}</td>
+                    <td>{{ booking.client.first_name }} {{ booking.client.last_name }}</td>
+                    <td>{{ booking.travel_date }}</td>
+                    <td>{{ "{:,.2f}".format(booking.total_amount_dzd) }} DZD</td>
+                    <td>
+                        <span class="badge bg-{{ 'warning' if booking.status == 'pending' else 'success' if booking.status == 'confirmed' else 'secondary' }}">
+                            {{ booking.status }}
+                        </span>
+                    </td>
+                    <td>
+                        <a href="{{ url_for('bookings.detail', booking_id=booking.id) }}" class="btn btn-sm btn-info">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

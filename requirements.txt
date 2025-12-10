@@ -1,0 +1,29 @@
+# ===== REQUIREMENTS POUR PYTHON 3.13 - VERSION CORRIGÉE =====
+
+# Flask et extensions
+Flask==3.0.0
+Flask-SQLAlchemy==3.1.1
+Flask-Login==0.6.3
+Flask-WTF==1.2.1
+WTForms==3.1.1
+
+# Base de données PostgreSQL
+SQLAlchemy==2.0.23
+# Utiliser la dernière version stable de psycopg3
+psycopg[binary]>=3.2.0
+
+# Sécurité
+Werkzeug==3.0.1
+email-validator==2.1.1
+
+# Génération de données
+Faker==20.1.0
+
+# Configuration
+python-dotenv==1.0.0
+
+# Gestion des dates
+pytz==2023.3
+
+# CORS
+Flask-CORS==4.0.0
