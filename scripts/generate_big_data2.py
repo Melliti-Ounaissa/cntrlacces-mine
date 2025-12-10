@@ -165,7 +165,9 @@ def main():
         user_ids = []
         for i in range(counts['users']):
             full_name = fake.name()
-            email = fake.email()
+            # Ajouter le compteur à l'email pour garantir l'unicité
+            base_email = fake.email()
+            email = f"user{i+1}_{base_email}"
             phone = generate_algerian_phone()
             password_hash = generate_password_hash('password123')
             department_id = random.choice(department_ids)
@@ -212,7 +214,9 @@ def main():
         client_ids = []
         for i in range(counts['clients']):
             full_name = fake.name()
-            email = fake.email()
+            # Ajouter le compteur à l'email pour garantir l'unicité
+            base_email = fake.email()
+            email = f"client{i+1}_{base_email}"
             phone = generate_algerian_phone()
             city = random.choice(VILLES_ALGERIE)
             rgpd_consent = random.random() < 0.75  # 75% consent
