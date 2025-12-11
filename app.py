@@ -14,6 +14,7 @@ from config import Config
 from models import db, User
 import logging
 
+
 # Initialiser Flask
 app = Flask(__name__)
 app.config.from_object(Config)
