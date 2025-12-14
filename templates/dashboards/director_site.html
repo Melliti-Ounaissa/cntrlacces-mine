@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard Directeur Site - VoyagesDZ{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Palette rose VoyagesDZ */
+:root {
+    --pink-light: #fcc7d1;
+    --pink-soft: #f0b3c5;
+    --pink-mid: #e47990;
+    --pink-warm: #de8c9c;
+    --pink-pastel: #f8d8de;
+    --pink-dark: #b8445e;
+}
+
+/* Background du dashboard */
+body {
+    background-color: #fceef2;
+}
+
+/* Cards statistiques */
+.card {
+    border-radius: 12px;
+    box-shadow: 0 2px 6px rgba(184,68,94,0.15);
+    transition: 0.25s;
+}
+.card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 12px rgba(184,68,94,0.25);
+}
+.card h6 {
+    font-weight: 600;
+}
+
+/* Cartes KPI couleurs individuelles */
+.card-kpi-1 { background-color: var(--pink-light); color: #000; }
+.card-kpi-2 { background-color: var(--pink-soft); color: #000; }
+.card-kpi-3 { background-color: var(--pink-mid); color: #fff; }
+.card-kpi-4 { background-color: var(--pink-warm); color: #fff; }
+
+/* Badges Top départements */
+.badge {
+    background-color: var(--pink-dark) !important;
+    color: white;
+}
+
+/* List group Top départements */
+.list-group-item {
+    border-color: var(--pink-soft);
+    background-color: white;
+    transition: 0.25s;
+}
+.list-group-item:hover {
+    background-color: var(--pink-light);
+    color: var(--pink-dark);
+}
+
+/* Titres et hr */
+h2, h5 {
+    color: var(--pink-mid);
+}
+hr {
+    border-color: var(--pink-soft);
+}
+
+/* Canvas Chart */
+canvas {
+    background-color: white;
+    border: 1px solid var(--pink-soft);
+    border-radius: 8px;
+    padding: 10px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2><i class="fas fa-chart-line"></i> Dashboard Directeur - Site</h2>
+        <p class="text-muted">{{ current_user.full_name }}</p>
+        {% if current_user.has_role('DIRECTOR_SITE') %}
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i> <strong>Permissions :</strong>
+            <ul class="mb-0">
+                <li>Voit : Tout son site (tous départements)</li>
+                <li>Peut : Supprimer des réservations, voir les stats du site</li>
+            </ul>
+        </div>
+        {% endif %}
+        <hr>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card card-kpi-1"><div class="card-body"><h6>Réservations</h6><h3>{{ stats.total_bookings if stats else 0 }}</h3></div></div>
+    </div>
+    <div class="col-md-3">
+        <div class="card card-kpi-2"><div class="card-body"><h6>Clients</h6><h3>{{ stats.total_clients if stats else 0 }}</h3></div></div>
+    </div>
+    <div class="col-md-3">
+        <div class="card card-kpi-3"><div class="card-body"><h6>Paiements</h6><h3>{{ stats.total_payments if stats else 0 }}</h3></div></div>
+    </div>
+    <div class="col-md-3">
+        <div class="card card-kpi-4"><div class="card-body"><h6>CA Total</h6><h3>{{ "{:,.2f}".format(stats.ca_total) if stats and stats.ca_total else "0.00" }} DZD</h3></div></div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h5>Évolution Mensuelle</h5>
+        <canvas id="siteCaChart" data-chart="line" data-labels='["Jan","Fév","Mar","Avr","Mai","Jun"]' data-values='[3200000,4500000,3800000,5100000,4700000,6200000]'></canvas>
+    </div>
+    <div class="col-md-4">
+        <h5>Top Départements</h5>
+        {% if current_user.has_role('DIRECTOR_SITE') %}
+        <p class="text-muted"><small>Vue complète de tous les départements de votre site</small></p>
+        {% endif %}
+        <ul class="list-group">
+            {% if dept_stats %}
+                {% for d in dept_stats[:5] %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    {{ d.name }}
+                    <span class="badge bg-primary">{{ d.bookings }}</span>
+                </li>
+                {% endfor %}
+            {% else %}
+                <li class="list-group-item">Aucune statistique disponible</li>
+            {% endif %}
+        </ul>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <h5>Actions Rapides</h5>
+        {% if current_user.has_role('DIRECTOR_SITE') %}
+        <div class="mb-3">
+            <a href="{{ url_for('bookings.create') }}" class="btn btn-primary btn-sm">
+                <i class="fas fa-plus"></i> Créer une Réservation
+            </a>
+            <a href="{{ url_for('bookings.list') }}" class="btn btn-secondary btn-sm">
+                <i class="fas fa-list"></i> Voir Toutes les Réservations
+            </a>
+        </div>
+        <p class="text-muted"><small>En tant que Directeur de Site, vous pouvez créer, modifier et supprimer toutes les réservations de votre site</small></p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ url_for('static', filename='js/dashboard_charts.js') }}"></script>
+{% endblock %}

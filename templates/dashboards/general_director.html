@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard Directeur Général - VoyagesDZ{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Palette rose VoyagesDZ */
+:root {
+    --pink-light: #fcc7d1;
+    --pink-soft: #f0b3c5;
+    --pink-mid: #e47990;
+    --pink-warm: #de8c9c;
+    --pink-pastel: #f8d8de;
+    --pink-dark: #b8445e;
+}
+
+/* Background du dashboard */
+body {
+    background-color: #fceef2;
+}
+
+/* Cards statistiques */
+.card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 2px 6px rgba(184,68,94,0.15);
+    margin-bottom: 20px;
+    transition: 0.25s;
+}
+.card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 12px rgba(184,68,94,0.25);
+}
+
+/* Cartes colorées individuellement */
+.card-card-1 { background-color: var(--pink-light); }
+.card-card-2 { background-color: var(--pink-soft); }
+.card-card-3 { background-color: var(--pink-mid); color: #fff; }
+.card-card-4 { background-color: var(--pink-warm); color: #fff; }
+
+.card h6 { font-weight: 600; }
+.card h3 { font-weight: 600; }
+
+/* List group Top départements */
+.list-group-item {
+    border-color: var(--pink-soft);
+    background-color: white;
+    transition: 0.25s;
+}
+.list-group-item:hover {
+    background-color: var(--pink-light);
+    color: var(--pink-dark);
+}
+
+/* Titres et hr */
+h2, h5 {
+    color: var(--pink-mid);
+}
+hr {
+    border-color: var(--pink-soft);
+}
+
+/* Canvas Chart */
+canvas {
+    background-color: white;
+    border: 1px solid var(--pink-soft);
+    border-radius: 8px;
+    padding: 10px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2><i class="fas fa-globe"></i> Dashboard Directeur Général</h2>
+        <p class="text-muted">Vue consolidée de l'entreprise</p>
+        {% if current_user.has_role('GENERAL_DIRECTOR') %}
+        <div class="alert alert-success">
+            <i class="fas fa-shield-alt"></i> <strong>Permissions Complètes :</strong>
+            <ul class="mb-0">
+                <li>Voit : TOUT (tous les sites, tous les départements)</li>
+                <li>Peut : <strong>Créer</strong>, <strong>Modifier</strong> et <strong>Supprimer</strong> toutes les réservations de tous les sites</li>
+                <li>Accès complet à toutes les fonctionnalités</li>
+            </ul>
+        </div>
+        {% endif %}
+        <hr>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card card-card-1">
+            <div class="card-body">
+                <h6>Total Réservations</h6>
+                <h3>{{ stats.total_bookings if stats else 0 }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card card-card-2">
+            <div class="card-body">
+                <h6>Total Clients</h6>
+                <h3>{{ stats.total_clients if stats else 0 }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card card-card-3">
+            <div class="card-body">
+                <h6>Total Paiements</h6>
+                <h3>{{ stats.total_payments if stats else 0 }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card card-card-4">
+            <div class="card-body">
+                <h6>CA Total</h6>
+                <h3>{{ "{:,.2f}".format(stats.ca_total) if stats and stats.ca_total else "0.00" }} DZD</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h5>Comparaison Sites (Alger vs Oran)</h5>
+        {% if current_user.has_role('GENERAL_DIRECTOR') %}
+        <p class="text-muted"><small>Vue consolidée de tous les sites de l'entreprise</small></p>
+        {% endif %}
+        <canvas id="sitesChart"
+            data-chart="bar"
+            data-labels='{{ site_comparison|map(attribute="name")|list|tojson }}'
+            data-values='{{ site_comparison|map(attribute="amount")|list|tojson }}'></canvas>
+    </div>
+    <div class="col-md-4">
+        <h5>Comparaison Sites</h5>
+        <ul class="list-group">
+            {% if site_comparison %}
+                {% for s in site_comparison %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    {{ s.name }}
+                    <span class="badge bg-success">{{ "{:,.2f}".format(s.amount) if s.amount else "0.00" }} DZD</span>
+                </li>
+                {% endfor %}
+            {% else %}
+                <li class="list-group-item">Aucune comparaison disponible</li>
+            {% endif %}
+        </ul>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <h5>Actions Rapides</h5>
+        {% if current_user.has_role('GENERAL_DIRECTOR') %}
+        <div class="mb-3">
+            <a href="{{ url_for('bookings.create') }}" class="btn btn-primary btn-sm">
+                <i class="fas fa-plus"></i> Créer une Réservation
+            </a>
+            <a href="{{ url_for('bookings.list') }}" class="btn btn-secondary btn-sm">
+                <i class="fas fa-list"></i> Voir Toutes les Réservations
+            </a>
+            <a href="{{ url_for('clients.list') }}" class="btn btn-info btn-sm">
+                <i class="fas fa-users"></i> Gérer les Clients
+            </a>
+            <a href="{{ url_for('payments.list') }}" class="btn btn-success btn-sm">
+                <i class="fas fa-money-bill"></i> Gérer les Paiements
+            </a>
+        </div>
+        <div class="alert alert-success">
+            <i class="fas fa-shield-alt"></i> <strong>Permissions Complètes :</strong> En tant que Directeur Général, vous avez accès à toutes les fonctionnalités et pouvez créer, modifier et supprimer toutes les réservations de tous les sites.
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const ctx = document.getElementById('sitesChart');
+    const labels = JSON.parse(ctx.dataset.labels);
+    const values = JSON.parse(ctx.dataset.values);
+
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'CA Total (DZD)',
+                data: values,
+                backgroundColor: ['#e47990', '#de8c9c'],  // palette: pink-mid et pink-warm
+                borderColor: ['#e47990', '#de8c9c'],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            scales: { y: { beginAtZero: true } }
+        }
+    });
+});
+</script>
+{% endblock %}

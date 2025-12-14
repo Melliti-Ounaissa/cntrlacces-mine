@@ -1,0 +1,258 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard Manager Département - VoyagesDZ{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Palette rose VoyagesDZ */
+    :root {
+        --pink-light: #fcc7d1;
+        --pink-soft: #f0b3c5;
+        --pink-mid: #e47990;
+        --pink-warm: #de8c9c;
+        --pink-pastel: #f8d8de;
+        --pink-dark: #b8445e;
+    }
+
+    body {
+        background-color: #fceef2;
+        color: #5a2f3f;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* Navbar */
+    .navbar-custom {
+        background-color: var(--pink-dark) !important;
+    }
+    .navbar-custom .btn-outline-light:hover {
+        background-color: var(--pink-mid) !important;
+        border-color: var(--pink-mid) !important;
+    }
+    .navbar-custom .navbar-brand,
+    .navbar-custom .navbar-text {
+        color: white !important;
+    }
+
+    /* Cards */
+    .card {
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 2px 6px rgba(184,68,94,0.15);
+        margin-bottom: 20px;
+        transition: 0.25s;
+    }
+    .card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 12px rgba(184,68,94,0.25);
+    }
+
+    /* Cartes colorées individuellement */
+    .card-card-1 { background-color: var(--pink-light); }
+    .card-card-2 { background-color: var(--pink-soft); }
+    .card-card-3 { background-color: var(--pink-mid); color: #fff; }
+    .card-card-4 { background-color: var(--pink-warm); color: #fff; }
+
+    .card h6 { font-weight: 600; }
+    .card h3 { font-weight: 600; }
+
+    /* List group */
+    .list-group-item {
+        border-color: var(--pink-soft);
+        background-color: white;
+        transition: 0.25s;
+    }
+    .list-group-item:hover {
+        background-color: var(--pink-light);
+        color: var(--pink-dark);
+    }
+
+    /* Table hover */
+    table.table-hover tbody tr:hover {
+        background-color: var(--pink-pastel) !important;
+    }
+
+    /* Titres et hr */
+    h2, h5 {
+        color: var(--pink-mid);
+    }
+    hr {
+        border-color: var(--pink-soft);
+    }
+
+    /* Canvas Chart */
+    canvas {
+        background-color: white;
+        border: 1px solid var(--pink-soft);
+        border-radius: 8px;
+        padding: 10px;
+    }
+
+    /* Badges équipe */
+    .badge-secondary {
+        background-color: var(--pink-dark) !important;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2><i class="fas fa-building"></i> Dashboard Manager - Département</h2>
+        <p class="text-muted">{{ current_user.full_name }}{% if current_user.department %} — Département {{ current_user.department.name }}{% endif %}</p>
+        {% if current_user.has_role('MANAGER_DEPT') %}
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i> <strong>Permissions :</strong>
+            <ul class="mb-0">
+                <li>Voit : Toutes les réservations de son département</li>
+                <li>Peut : <strong>Créer</strong> et <strong>Modifier</strong> des réservations de son département</li>
+                <li>Horaires : Lun-Sam 7h-20h</li>
+            </ul>
+        </div>
+        {% endif %}
+        <hr>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card card-card-1">
+            <div class="card-body">
+                <h6>Total Réservations</h6>
+                <h3>{{ stats.total_bookings }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card card-card-2">
+            <div class="card-body">
+                <h6>CA Total</h6>
+                <h3>{{ "{:,.2f}".format(stats.total_amount) }} DZD</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card card-card-3">
+            <div class="card-body">
+                <h6>En Attente</h6>
+                <h3>{{ stats.pending }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card card-card-4">
+            <div class="card-body">
+                <h6>Confirmées</h6>
+                <h3>{{ stats.confirmed }}</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h5>CA Mensuel</h5>
+        {% if monthly_ca %}
+        <canvas id="caChart"
+                data-chart="line"
+                data-labels='{{ monthly_ca.labels|tojson }}'
+                data-values='{{ monthly_ca.values|tojson }}'>
+        </canvas>
+        {% else %}
+        <p class="text-muted">Données mensuelles non disponibles</p>
+        {% endif %}
+    </div>
+    <div class="col-md-4">
+        <h5>Équipe</h5>
+        <ul class="list-group">
+            {% for emp in employees %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                {{ emp.full_name }}
+                <span class="badge badge-secondary">{{ emp.get_highest_role().name if emp.get_highest_role() else 'EMPLOYEE' }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <h5>Réservations Récentes du Département</h5>
+        {% if current_user.has_role('MANAGER_DEPT') %}
+        <p class="text-muted"><small>Affichage des réservations de votre département uniquement</small></p>
+        <div class="mb-3">
+            <a href="{{ url_for('bookings.create') }}" class="btn btn-primary btn-sm">
+                <i class="fas fa-plus"></i> Créer une Réservation
+            </a>
+        </div>
+        {% endif %}
+        <table class="table table-hover">
+            <thead class="table-dark">
+                <tr>
+                    <th>Réf</th>
+                    <th>Client</th>
+                    <th>Date</th>
+                    <th>Montant</th>
+                    <th>Statut</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for b in recent_bookings %}
+                <tr>
+                    <td>{{ b.booking_reference }}</td>
+                    <td>{% if b.client %}{{ b.client.first_name }} {{ b.client.last_name }}{% else %}N/A{% endif %}</td>
+                    <td>{{ b.travel_date if b.travel_date else 'N/A' }}</td>
+                    <td>{{ "{:,.2f}".format(b.total_amount_dzd) if b.total_amount_dzd else "0.00" }} DZD</td>
+                    <td>
+                        <span class="badge bg-{{ 'warning' if b.status == 'pending' else 'success' if b.status == 'confirmed' else 'secondary' }}">
+                            {{ b.status }}
+                        </span>
+                    </td>
+                    <td>
+                        <a href="{{ url_for('bookings.detail', booking_id=b.id) }}" class="btn btn-sm btn-info" title="Voir">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                        {% if current_user.has_role('MANAGER_DEPT') and b.created_by_department_id == current_user.department_id %}
+                        <a href="{{ url_for('bookings.update', booking_id=b.id) }}" class="btn btn-sm btn-warning" title="Modifier">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const ctx = document.getElementById('caChart');
+    if (ctx) {
+        const labels = JSON.parse(ctx.dataset.labels);
+        const values = JSON.parse(ctx.dataset.values);
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'CA Mensuel (DZD)',
+                    data: values,
+                    borderColor: '#e47990', // couleur rose VoyagesDZ
+                    backgroundColor: 'rgba(228, 121, 144, 0.15)', // rose clair transparent
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true
+            }
+        });
+    }
+</script>
+{% endblock %}

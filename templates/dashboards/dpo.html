@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard DPO - VoyagesDZ{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Palette VoyagesDZ */
+    :root {
+        --pink-light: #fcc7d1;
+        --pink-soft: #f0b3c5;
+        --pink-mid: #e47990;
+        --pink-warm: #de8c9c;
+        --pink-pastel: #f8d8de;
+        --pink-dark: #b8445e;
+    }
+
+    body {
+        background-color: #fceef2;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* Navbar */
+    .navbar {
+        background-color: var(--pink-dark) !important;
+    }
+
+    /* Cartes statistiques */
+    .card {
+        border-radius: 12px;
+        box-shadow: 0 2px 6px rgba(184,68,94,0.15);
+        margin-bottom: 20px;
+        transition: 0.25s;
+    }
+    .card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 12px rgba(184,68,94,0.25);
+    }
+
+    .card-custom-1 { background-color: var(--pink-light); color: #000; }
+    .card-custom-2 { background-color: var(--pink-soft); color: #000; }
+    .card-custom-3 { background-color: var(--pink-mid); color: #fff; }
+    .card-custom-4 { background-color: var(--pink-warm); color: #fff; }
+
+    .card h6 { font-weight: 500; }
+    .card h3 { font-weight: 600; }
+
+    /* Boutons anonymiser */
+    .btn-danger {
+        background-color: var(--pink-dark);
+        border-color: var(--pink-mid);
+        color: #fff;
+    }
+    .btn-danger:hover {
+        background-color: var(--pink-mid);
+        border-color: var(--pink-dark);
+        color: #fff;
+    }
+
+    /* Tables */
+    table {
+        background-color: white;
+        border: 1px solid var(--pink-soft);
+        border-radius: 8px;
+    }
+    table th { color: var(--pink-dark); }
+    table td { color: var(--pink-mid); }
+
+    /* Titres et hr */
+    h2, h5 { color: var(--pink-mid); }
+    hr { border-color: var(--pink-soft); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2><i class="fas fa-user-shield"></i> Dashboard DPO</h2>
+        <p class="text-muted">Conformité RGPD</p>
+        {% if current_user.has_role('DPO') %}
+        <div class="alert alert-warning">
+            <i class="fas fa-shield-alt"></i> <strong>Permissions DPO :</strong>
+            <ul class="mb-0">
+                <li>Voit : Logs RGPD, clients sans consentement</li>
+                <li>Peut : Anonymiser des clients, gérer la conformité Loi 18-07</li>
+            </ul>
+        </div>
+        {% endif %}
+        <hr>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card card-custom-1">
+            <div class="card-body">
+                <h6>Total Clients</h6>
+                <h3>{{ stats.total_clients if stats else 0 }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card card-custom-2">
+            <div class="card-body">
+                <h6>Consentement</h6>
+                <h3>{{ "{:.1f}".format(stats.consent_rate) if stats and stats.consent_rate is not none else "0.0" }}%</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card card-custom-3">
+            <div class="card-body">
+                <h6>Sans Consentement</h6>
+                <h3>{{ stats.no_consent if stats else 0 }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card card-custom-4">
+            <div class="card-body">
+                <h6>Anonymisés</h6>
+                <h3>{{ stats.anonymized if stats else 0 }}</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <h5>Clients sans consentement</h5>
+        {% if current_user.has_role('DPO') %}
+        <p class="text-muted"><small>Liste des clients nécessitant une action de conformité (Loi 18-07)</small></p>
+        {% endif %}
+        <table class="table table-sm">
+            <thead>
+                <tr>
+                    <th>Client</th>
+                    <th>Téléphone</th>
+                    <th>Ville</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if no_consent_clients %}
+                    {% for c in no_consent_clients %}
+                    <tr>
+                        <td>{% if c.first_name and c.last_name %}{{ c.first_name }} {{ c.last_name }}{% else %}N/A{% endif %}</td>
+                        <td>{{ c.phone if c.phone else 'N/A' }}</td>
+                        <td>{{ c.city if c.city else 'N/A' }}</td>
+                        <td>
+                            <form method="post" action="{{ url_for('clients.anonymize', client_id=c.id) }}">
+                                <button class="btn btn-sm btn-danger" type="submit">Anonymiser</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr><td colspan="4" class="text-muted">Aucun client sans consentement</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+    <div class="col-md-6">
+        <h5>Logs d'accès aux données</h5>
+        {% if current_user.has_role('DPO') %}
+        <p class="text-muted"><small>Traçabilité des accès aux données personnelles (RGPD)</small></p>
+        {% endif %}
+        <table class="table table-sm">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Utilisateur</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if recent_logs %}
+                    {% for l in recent_logs %}
+                    <tr>
+                        <td>{{ l.created_at if l.created_at else 'N/A' }}</td>
+                        <td>{{ l.user.full_name if l.user and l.user.full_name else 'Système' }}</td>
+                        <td>{{ l.action if l.action else 'N/A' }}</td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr><td colspan="3" class="text-muted">Aucun log disponible</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ url_for('static', filename='js/dashboard_charts.js') }}"></script>
+{% endblock %}

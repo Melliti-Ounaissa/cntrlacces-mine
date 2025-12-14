@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard Manager Multi - VoyagesDZ{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Palette rose VoyagesDZ */
+    :root {
+        --pink-light: #fcc7d1;
+        --pink-soft: #f0b3c5;
+        --pink-mid: #e47990;
+        --pink-warm: #de8c9c;
+        --pink-pastel: #f8d8de;
+        --pink-dark: #b8445e;
+    }
+
+    body {
+        background-color: #fceef2;
+        color: #5a2f3f;
+    }
+
+    /* Cards */
+    .card {
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 2px 6px rgba(184,68,94,0.15);
+        margin-bottom: 20px;
+        transition: 0.25s;
+    }
+    .card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 12px rgba(184,68,94,0.25);
+    }
+
+    .card h6 { font-weight: 600; }
+    .card h3 { font-weight: 600; }
+
+    /* Titles and hr */
+    h2, h5 { color: var(--pink-mid); }
+    hr { border-color: var(--pink-soft); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2><i class="fas fa-sitemap"></i> Dashboard Manager Multi-Départements</h2>
+        <p class="text-muted">{{ current_user.full_name }}</p>
+        {% if current_user.has_role('MANAGER_MULTI_DEPT') %}
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i> <strong>Permissions :</strong>
+            <ul class="mb-0">
+                <li>Voit : Plusieurs départements d'un même site</li>
+                <li>Peut : <strong>Créer</strong> et <strong>Modifier</strong> des réservations de plusieurs départements</li>
+            </ul>
+        </div>
+        {% endif %}
+        <hr>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card" style="background-color: var(--pink-light);">
+            <div class="card-body">
+                <h6>Total Réservations (site)</h6>
+                <h3>{{ stats.total_bookings if stats else 0 }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card" style="background-color: var(--pink-soft);">
+            <div class="card-body">
+                <h6>CA Total</h6>
+                <h3>{{ "{:,.2f}".format(stats.total_amount) if stats and stats.total_amount else "0.00" }} DZD</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card" style="background-color: var(--pink-mid); color: #fff;">
+            <div class="card-body">
+                <h6>Ce Mois</h6>
+                <h3>{{ stats.this_month if stats else 0 }}</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<h5>Stats par Département</h5>
+{% if current_user.has_role('MANAGER_MULTI_DEPT') %}
+<p class="text-muted"><small>Vue consolidée de plusieurs départements de votre site</small></p>
+<div class="mb-3">
+    <a href="{{ url_for('bookings.create') }}" class="btn btn-primary btn-sm">
+        <i class="fas fa-plus"></i> Créer une Réservation
+    </a>
+    <a href="{{ url_for('bookings.list') }}" class="btn btn-secondary btn-sm">
+        <i class="fas fa-list"></i> Voir Toutes les Réservations
+    </a>
+</div>
+{% endif %}
+<div class="row mb-4">
+    {% if dept_stats %}
+        {% for ds in dept_stats %}
+        <div class="col-md-4 mb-2">
+            <div class="card" style="background-color: var(--pink-pastel);">
+                <div class="card-body">
+                    <h6>{{ ds.name }}</h6>
+                    <p class="mb-0">Réservations: {{ ds.bookings }}</p>
+                    <p class="mb-0">CA: {{ "{:,.2f}".format(ds.amount) if ds.amount else "0.00" }} DZD</p>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="col-12">
+            <p class="text-muted">Aucune statistique de département disponible</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ url_for('static', filename='js/dashboard_charts.js') }}"></script>
+{% endblock %}
