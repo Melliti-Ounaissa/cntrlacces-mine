@@ -13,8 +13,9 @@ from flask_login import LoginManager, current_user
 from config import Config
 from models import db, User
 import logging
-
-
+import os
+from dotenv import load_dotenv
+load_dotenv()
 # Initialiser Flask
 app = Flask(__name__)
 app.config.from_object(Config)

@@ -1,3 +1,4 @@
+
 """
 scripts/generate_data_standalone.py - Version STANDALONE sans dépendance Flask
 
@@ -165,9 +166,7 @@ def main():
         user_ids = []
         for i in range(counts['users']):
             full_name = fake.name()
-            # Ajouter le compteur à l'email pour garantir l'unicité
-            base_email = fake.email()
-            email = f"user{i+1}_{base_email}"
+            email = fake.email()
             phone = generate_algerian_phone()
             password_hash = generate_password_hash('password123')
             department_id = random.choice(department_ids)
@@ -211,48 +210,40 @@ def main():
         # ==================== 5. CLIENTS ====================
         print(f"👥 Création de {counts['clients']} clients...")
         
-        client_ids = []
-        batch_size = 500  # Commit plus fréquent pour éviter les timeouts
+        # AJOUTER CETTE LIGNE POUR RÉINITIALISER L'UNICITÉ DE FAKER
+        fake.unique.clear() 
         
+        client_ids = []
         for i in range(counts['clients']):
-            try:
-                full_name = fake.name()
-                # Ajouter le compteur à l'email pour garantir l'unicité
-                base_email = fake.email()
-                email = f"client{i+1}_{base_email}"
-                phone = generate_algerian_phone()
-                city = random.choice(VILLES_ALGERIE)
-                rgpd_consent = random.random() < 0.75  # 75% consent
-                
-                result = session.execute(text("""
-                    INSERT INTO clients (full_name, email, phone, city, rgpd_consent, consent_date, created_at)
-                    VALUES (:full_name, :email, :phone, :city, :rgpd_consent, :consent_date, :created_at)
-                    RETURNING id
-                """), {
-                    'full_name': full_name,
-                    'email': email,
-                    'phone': phone,
-                    'city': city,
-                    'rgpd_consent': rgpd_consent,
-                    'consent_date': datetime.now() if rgpd_consent else None,
-                    'created_at': datetime.now() - timedelta(days=random.randint(0, 365))
-                })
-                client_id = result.fetchone()[0]
-                client_ids.append(client_id)
-                
-                # Commit plus fréquent (tous les 500 au lieu de 1000)
-                if (i + 1) % batch_size == 0:
-                    session.commit()
-                    print(f"   ⏳ {i + 1}/{counts['clients']} clients créés...")
-                    
-            except Exception as e:
-                print(f"   ⚠️ Erreur au client {i+1}: {e}")
-                session.rollback()
-                # Continuer quand même
-                continue
+            full_name = fake.name()
+            # MODIFIER ICI: Utiliser fake.unique.email() pour garantir l'unicité
+            email = fake.unique.email() 
+            phone = generate_algerian_phone()
+            city = random.choice(VILLES_ALGERIE)
+            rgpd_consent = random.random() < 0.75  # 75% consent
+            
+            result = session.execute(text("""
+                INSERT INTO clients (full_name, email, phone, city, rgpd_consent, consent_date, created_at)
+                VALUES (:full_name, :email, :phone, :city, :rgpd_consent, :consent_date, :created_at)
+                RETURNING id
+            """), {
+                'full_name': full_name,
+                'email': email,
+                'phone': phone,
+                'city': city,
+                'rgpd_consent': rgpd_consent,
+                'consent_date': datetime.now() if rgpd_consent else None,
+                'created_at': datetime.now() - timedelta(days=random.randint(0, 365))
+            })
+            client_id = result.fetchone()[0]
+            client_ids.append(client_id)
+            
+            if (i + 1) % 1000 == 0:
+                session.commit()
+                print(f"   ⏳ {i + 1}/{counts['clients']} clients créés...")
         
         session.commit()
-        print(f"   ✅ {len(client_ids)} clients créés\n")
+        print(f"   ✅ {counts['clients']} clients créés\n")
         
         # ==================== 6. VOLS ====================
         print("✈️ Création de vols...")
@@ -264,8 +255,7 @@ def main():
             departure = random.choice(AEROPORTS['Algérie'])
             arrival = random.choice(AEROPORTS['International'])
             airline = random.choice(COMPAGNIES)
-            # Ajouter le compteur pour garantir l'unicité
-            flight_number = f"{airline[:2].upper()}{random.randint(100, 999)}-{i+1}"
+            flight_number = f"{airline[:2].upper()}{random.randint(100, 999)}"
             departure_date = datetime.now() + timedelta(days=random.randint(1, 180))
             price = random.randint(15000, 150000)  # Prix en DZD
             
@@ -291,85 +281,83 @@ def main():
         # ==================== 7. RÉSERVATIONS ====================
         print(f"📋 Création de {counts['bookings']} réservations...")
         
-        booking_ids = []
-        batch_size = 1000  # Batch plus petit pour les réservations
+        # --- NOUVEAU CODE POUR PRÉPARER LES PAIRES UNIQUES ---
+        # Calculer le nombre maximum de réservations uniques possibles
+        max_bookings = len(client_ids) * len(flight_ids)
+        num_bookings_to_create = min(counts['bookings'], max_bookings)
         
-        for i in range(counts['bookings']):
-            try:
-                client_id = random.choice(client_ids)
-                flight_id = random.choice(flight_ids)
-                user_id = random.choice(user_ids)
-                total_price = random.randint(10000, 500000)
-                status = random.choices(
-                    ['CONFIRMED', 'PENDING', 'CANCELLED'],
-                    weights=[0.70, 0.20, 0.10]
-                )[0]
-                created_at = datetime.now() - timedelta(days=random.randint(0, 365))
-                
-                result = session.execute(text("""
-                    INSERT INTO bookings (client_id, flight_id, total_price, status, 
-                                          created_by_user_id, created_at)
-                    VALUES (:client_id, :flight_id, :total_price, :status, :user_id, :created_at)
-                    RETURNING id
-                """), {
-                    'client_id': client_id,
-                    'flight_id': flight_id,
-                    'total_price': total_price,
-                    'status': status,
-                    'user_id': user_id,
-                    'created_at': created_at
-                })
-                booking_id = result.fetchone()[0]
-                booking_ids.append(booking_id)
-                
-                if (i + 1) % batch_size == 0:
-                    session.commit()
-                    print(f"   ⏳ {i + 1}/{counts['bookings']} réservations créées...")
-                    
-            except Exception as e:
-                print(f"   ⚠️ Erreur à la réservation {i+1}: {e}")
-                session.rollback()
-                continue
+        print(f"   (Max. uniques possibles: {max_bookings:,}. Création de {num_bookings_to_create:,} uniques)")
+        
+        # Créer toutes les paires (client_id, flight_id) uniques
+        all_unique_pairs = [(c, f) for c in client_ids for f in flight_ids]
+        
+        # Mélanger et sélectionner le nombre exact de réservations souhaitées
+        random.shuffle(all_unique_pairs)
+        selected_pairs = all_unique_pairs[:num_bookings_to_create]
+        
+        booking_ids = []
+        # MODIFIER LA BOUCLE POUR PARCOURIR LES PAIRES PRÉSÉLECTIONNÉES
+        for i, (client_id, flight_id) in enumerate(selected_pairs):
+            # client_id et flight_id sont déjà uniques par définition de la boucle
+            
+            # --- Code inchangé (sauf la source de client_id et flight_id) ---
+            user_id = random.choice(user_ids)
+            total_price = random.randint(10000, 500000)
+            status = random.choices(
+                ['CONFIRMED', 'PENDING', 'CANCELLED'],
+                weights=[0.70, 0.20, 0.10]
+            )[0]
+            created_at = datetime.now() - timedelta(days=random.randint(0, 365))
+            
+            result = session.execute(text("""
+                INSERT INTO bookings (client_id, flight_id, total_price, status, 
+                                      created_by_user_id, created_at)
+                VALUES (:client_id, :flight_id, :total_price, :status, :user_id, :created_at)
+                RETURNING id
+            """), {
+                'client_id': client_id,
+                'flight_id': flight_id,
+                'total_price': total_price,
+                'status': status,
+                'user_id': user_id,
+                'created_at': created_at
+            })
+            booking_id = result.fetchone()[0]
+            booking_ids.append(booking_id)
+            
+            if (i + 1) % 5000 == 0:
+                session.commit()
+                print(f"   ⏳ {i + 1}/{counts['bookings']} réservations créées...")
         
         session.commit()
-        print(f"   ✅ {len(booking_ids)} réservations créées\n")
+        print(f"   ✅ {counts['bookings']} réservations créées\n")
         
         # ==================== 8. PAIEMENTS ====================
         print(f"💳 Création de {counts['payments']} paiements...")
         
-        batch_size = 1000
-        payment_count = 0
-        
         for i in range(counts['payments']):
-            try:
-                booking_id = random.choice(booking_ids)
-                payment_method = random.choice(['CARD', 'CASH', 'TRANSFER'])
-                amount = random.randint(10000, 500000)
-                status = random.choices(['COMPLETED', 'PENDING', 'FAILED'], weights=[0.85, 0.10, 0.05])[0]
-                
-                session.execute(text("""
-                    INSERT INTO payments (booking_id, amount, payment_method, status, payment_date)
-                    VALUES (:booking_id, :amount, :payment_method, :status, :payment_date)
-                """), {
-                    'booking_id': booking_id,
-                    'amount': amount,
-                    'payment_method': payment_method,
-                    'status': status,
-                    'payment_date': datetime.now() - timedelta(days=random.randint(0, 365))
-                })
-                payment_count += 1
-                
-                if (i + 1) % batch_size == 0:
-                    session.commit()
-                    print(f"   ⏳ {i + 1}/{counts['payments']} paiements créés...")
-                    
-            except Exception as e:
-                print(f"   ⚠️ Erreur au paiement {i+1}: {e}")
-                session.rollback()
-                continue
+            booking_id = random.choice(booking_ids)
+            payment_method = random.choice(['CARD', 'CASH', 'TRANSFER'])
+            amount = random.randint(10000, 500000)
+            status = random.choices(['COMPLETED', 'PENDING', 'FAILED'], weights=[0.85, 0.10, 0.05])[0]
+            
+            session.execute(text("""
+                INSERT INTO payments (booking_id, amount, payment_method, status, payment_date)
+                VALUES (:booking_id, :amount, :payment_method, :status, :payment_date)
+            """), {
+                'booking_id': booking_id,
+                'amount': amount,
+                'payment_method': payment_method,
+                'status': status,
+                'payment_date': datetime.now() - timedelta(days=random.randint(0, 365))
+            })
+            
+            if (i + 1) % 5000 == 0:
+                session.commit()
+                print(f"   ⏳ {i + 1}/{counts['payments']} paiements créés...")
         
         session.commit()
-        print(f"   ✅ {payment_count} paiements créés\n")
+        print(f"   ✅ {counts['payments']} paiements créés\n")
         
         print(f"\n{'='*60}")
         print("🎉 GÉNÉRATION TERMINÉE AVEC SUCCÈS!")

@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Accueil | VoyagesDZ{% endblock %}
+
+{% block content %}
+<section class="vz-hero">
+  <h1>VoyagesDZ RBAC</h1>
+  <p>Application de gestion des réservations avec contrôle d’accès par rôles.</p>
+
+  <div class="vz-hero-actions">
+    {% if current_user.is_authenticated %}
+      <a class="vz-btn vz-primary" href="{{ url_for('dashboard_redirect') }}">Aller au dashboard</a>
+      <a class="vz-btn" href="{{ url_for('bookings.list') }}">Voir les réservations</a>
+    {% else %}
+      <a class="vz-btn vz-primary" href="{{ url_for('auth.login') }}">Se connecter</a>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

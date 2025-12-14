@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Dashboard Employé | VoyagesDZ{% endblock %}
+
+{% block content %}
+<div class="vz-page-head mb-3">
+  <div>
+    <h1 class="h4 mb-1">Dashboard — Employé</h1>
+    <div class="text-muted small">Bienvenue, {{ current_user.full_name }}.</div>
+  </div>
+
+  <div class="vz-actions">
+    <a class="btn btn-outline-dark" href="{{ url_for('bookings.list') }}">Voir mes réservations</a>
+  </div>
+</div>
+
+
+<div class="vz-grid">
+  <div class="vz-card vz-stat">
+    <div class="vz-k">Total réservations</div>
+    <div class="vz-v">{{ stats.total_bookings }}</div>
+  </div>
+  <div class="vz-card vz-stat">
+    <div class="vz-k">Ce mois-ci</div>
+    <div class="vz-v">{{ stats.this_month }}</div>
+  </div>
+  <div class="vz-card vz-stat">
+    <div class="vz-k">En attente</div>
+    <div class="vz-v">{{ stats.pending }}</div>
+  </div>
+  <div class="vz-card vz-stat">
+    <div class="vz-k">Confirmées</div>
+    <div class="vz-v">{{ stats.confirmed }}</div>
+  </div>
+</div>
+
+<div class="vz-card">
+  <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px;">
+    <div style="font-weight:950;">Mes 10 dernières réservations</div>
+    <a class="vz-btn" href="{{ url_for('bookings.list') }}">Voir tout</a>
+  </div>
+
+  <table class="vz-table">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Client</th>
+        <th>Montant (DZD)</th>
+        <th>Statut</th>
+        <th>Créée le</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for b in recent_bookings %}
+        <tr>
+          <td style="font-weight:900;">{{ b.id }}</td>
+          <td>{{ b.client.full_name if b.client else "—" }}</td>
+          <td>{{ "%.2f"|format((b.total_price or 0)|float) }}</td>
+          <td>{{ b.status }}</td>
+          <td>{{ b.created_at.strftime("%Y-%m-%d %H:%M") if b.created_at else "—" }}</td>
+          <td style="text-align:right;">
+            <a class="vz-btn" href="{{ url_for('bookings.detail', booking_id=b.id) }}">Détails</a>
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="6" style="color:var(--vz-muted);">Aucune réservation.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

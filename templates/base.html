@@ -1,74 +1,68 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}VoyagesDZ{% endblock %}</title>
-    
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    {% block extra_css %}{% endblock %}
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}VoyagesDZ{% endblock %}</title>
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <script defer src="{{ url_for('static', filename='js/main.js') }}"></script>
 </head>
 <body>
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="{{ url_for('public.index') }}">
-                <i class="fas fa-plane"></i> VoyagesDZ
-            </a>
-            
-            {% if current_user.is_authenticated %}
-            <div class="navbar-nav ms-auto">
-                <span class="navbar-text me-3">
-                    👤 {{ current_user.full_name }} ({{ user_role }})
-                </span>
-                <a href="{{ url_for('dashboard_redirect') }}" class="btn btn-outline-light btn-sm me-2">
-                    <i class="fas fa-dashboard"></i> Dashboard
-                </a>
-                <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-light btn-sm">
-                    <i class="fas fa-sign-out-alt"></i> Déconnexion
-                </a>
-            </div>
-            {% else %}
-            <div class="navbar-nav ms-auto">
-                <a href="{{ url_for('auth.login') }}" class="btn btn-outline-light btn-sm">
-                    <i class="fas fa-sign-in-alt"></i> Connexion
-                </a>
-            </div>
-            {% endif %}
-        </div>
-    </nav>
-    
-    <!-- Flash Messages -->
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            <div class="container mt-3">
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ 'success' if category == 'success' else 'danger' if category == 'error' else 'info' }} alert-dismissible fade show">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                {% endfor %}
-            </div>
-        {% endif %}
-    {% endwith %}
-    
-    <!-- Content -->
-    <div class="container-fluid mt-4">
-        {% block content %}{% endblock %}
+
+  <header class="vz-topbar">
+    <div class="vz-brand">
+      <div class="vz-logo">✈</div>
+      <div>VoyagesDZ</div>
     </div>
-    
-    <!-- Footer -->
-    <footer class="bg-light text-center py-3 mt-5">
-        <p class="mb-0">&copy; 2024 VoyagesDZ - Projet Big Data USTHB</p>
-    </footer>
-    
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    {% block extra_js %}{% endblock %}
+
+    <div class="vz-actions">
+      <button class="vz-iconbtn" type="button" aria-label="Menu">≡</button>
+
+      {% if current_user.is_authenticated %}
+        <div class="vz-chip">
+          <span class="vz-dot"></span>
+          <span>{{ current_user.full_name }}</span>
+          {% set r = (current_user.get_highest_role().code if current_user.get_highest_role() else "NO_ROLE") %}
+          <span class="vz-chip-muted">({{ r }})</span>
+        </div>
+        <a class="vz-btn vz-ghost" href="{{ url_for('auth.logout') }}">Déconnexion</a>
+      {% else %}
+        <a class="vz-btn vz-ghost" href="{{ url_for('auth.login') }}">Connexion</a>
+      {% endif %}
+    </div>
+  </header>
+
+  <main class="vz-app">
+    <aside class="vz-sidebar">
+      <nav class="vz-nav">
+        <a href="{{ url_for('public.index') }}" class="{% if request.path == '/' %}active{% endif %}">Accueil</a>
+        <a href="{{ url_for('dashboard.employee') }}" class="{% if 'dashboard' in request.path %}active{% endif %}">Dashboard</a>
+
+        <div class="vz-nav-title">Modules</div>
+        <a href="{{ url_for('bookings.list') }}" class="{% if 'bookings' in request.path %}active{% endif %}">Réservations</a>
+        <a href="{{ url_for('clients.list') }}" class="{% if 'clients' in request.path %}active{% endif %}">Clients</a>
+        <a href="{{ url_for('payments.list') }}" class="{% if 'payments' in request.path %}active{% endif %}">Paiements</a>
+      </nav>
+    </aside>
+
+    <section class="vz-content">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div class="vz-alerts">
+            {% for category, msg in messages %}
+              <div class="vz-alert {{ 'success' if category=='success' else ('error' if category in ['error','danger'] else '') }}">
+                <div>{{ msg }}</div>
+                <button class="vz-close" type="button" onclick="this.parentElement.remove()">×</button>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+
+      {% block content %}{% endblock %}
+    </section>
+  </main>
+
 </body>
 </html>

@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Connexion | VoyagesDZ{% endblock %}
+
+{% block content %}
+<div class="vz-login-wrapper">
+  <div class="vz-login-card">
+    
+    <div class="vz-login-icon">✈</div>
+
+    <h1 class="vz-login-title">Connexion</h1>
+    <p class="vz-login-subtitle">
+      Accédez à votre espace VoyagesDZ
+    </p>
+
+    <form method="post">
+      <div class="vz-field">
+        <label>Adresse e-mail</label>
+        <input type="email" name="email" required>
+      </div>
+
+      <div class="vz-field">
+        <label>Mot de passe</label>
+        <input type="password" name="password" required>
+      </div>
+
+      <div class="vz-login-row">
+        <label class="vz-checkbox">
+          <input type="checkbox">
+          <span>Se souvenir de moi</span>
+        </label>
+
+        <a href="#" class="vz-link">Mot de passe oublié ?</a>
+      </div>
+
+      <button class="vz-btn vz-primary vz-login-btn" type="submit">
+        Se connecter
+      </button>
+    </form>
+
+    <div class="vz-login-tests">
+      <strong>Comptes de test :</strong>
+      <ul>
+        <li><b>EMPLOYEE</b> : sarah@voyagesdz.dz / password123</li>
+        <li><b>MANAGER_DEPT</b> : karim@voyagesdz.dz / password123</li>
+        <li><b>DIRECTOR_SITE</b> : omar@voyagesdz.dz / password123</li>
+        <li><b>GENERAL_DIRECTOR</b> : ahmed@voyagesdz.dz / password123</li>
+        <li><b>ADMIN_IT</b> : yacine@voyagesdz.dz / password123</li>
+        <li><b>DPO</b> : dpo@voyagesdz.dz / password123</li>
+      </ul>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
