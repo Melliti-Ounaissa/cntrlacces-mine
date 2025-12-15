@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block title %}Nouveau client - VoyagesDZ{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2><i class="fas fa-user-plus"></i> Nouveau Client</h2>
+        <hr>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="post">
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Nom complet *</strong></label>
+                        <input type="text" name="full_name" class="form-control" required 
+                               placeholder="Ex: Mohamed Amine Benali">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Email *</strong></label>
+                        <input type="email" name="email" class="form-control" required 
+                               placeholder="exemple@email.com">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Téléphone</strong></label>
+                        <input type="text" name="phone" class="form-control" 
+                               placeholder="+213555123456" pattern="\+213[0-9]{9}">
+                        <small class="text-muted">Format: +213 suivi de 9 chiffres</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Ville</strong></label>
+                        <select name="city" class="form-select">
+                            <option value="">-- Sélectionner une ville --</option>
+                            <option value="Alger">Alger</option>
+                            <option value="Oran">Oran</option>
+                            <option value="Constantine">Constantine</option>
+                            <option value="Annaba">Annaba</option>
+                            <option value="Blida">Blida</option>
+                            <option value="Sétif">Sétif</option>
+                            <option value="Tlemcen">Tlemcen</option>
+                            <option value="Batna">Batna</option>
+                            <option value="Béjaïa">Béjaïa</option>
+                            <option value="Tizi Ouzou">Tizi Ouzou</option>
+                        </select>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="mb-3">
+                        <div class="card bg-warning bg-opacity-10 border-warning">
+                            <div class="card-body">
+                                <div class="form-check">
+                                    <input type="checkbox" name="consent_checkbox" class="form-check-input" 
+                                           id="consent" required>
+                                    <label class="form-check-label" for="consent">
+                                        <strong>⚠️ Consentement RGPD (Loi 18-07) *</strong>
+                                        <br>
+                                        <small>
+                                            Le client consent au traitement de ses données personnelles 
+                                            conformément à la Loi n° 18-07 du 10 juin 2018 relative à la 
+                                            protection des personnes physiques dans le traitement des 
+                                            données à caractère personnel.
+                                        </small>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Créer le client
+                    </button>
+                    <a href="{{ url_for('clients.list') }}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Annuler
+                    </a>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card bg-light">
+            <div class="card-body">
+                <h5 class="card-title">ℹ️ Informations</h5>
+                <p class="mb-2"><strong>Champs obligatoires :</strong></p>
+                <ul class="small">
+                    <li>Nom complet</li>
+                    <li>Email (unique)</li>
+                    <li>Consentement RGPD</li>
+                </ul>
+                
+                <p class="mb-2 mt-3"><strong>Loi 18-07 :</strong></p>
+                <p class="small">
+                    Le consentement du client est obligatoire pour le traitement 
+                    de ses données personnelles conformément à la législation 
+                    algérienne.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

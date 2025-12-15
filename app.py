@@ -1,21 +1,17 @@
 """
-app.py - Configuration Flask principale
-Projet Big Data VoyagesDZ
-
-Adapté au schéma réel avec :
-- user_roles (many-to-many)
-- full_name au lieu de first_name + last_name
-- Système de permissions
+app.py - Configuration Flask CORRIGÉE
 """
 
 from flask import Flask, redirect, url_for, render_template, flash
-from flask_login import LoginManager, current_user
+from flask_login import LoginManager, current_user, login_required
 from config import Config
 from models import db, User
 import logging
 import os
 from dotenv import load_dotenv
+
 load_dotenv()
+
 # Initialiser Flask
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -33,7 +29,7 @@ login_manager.login_message = 'Veuillez vous connecter pour accéder à cette pa
 @login_manager.user_loader
 def load_user(user_id):
     """Charge un utilisateur depuis la BD"""
-    return User.query.get(user_id)
+    return User.query.get(int(user_id))
 
 
 # ===== ENREGISTREMENT DES BLUEPRINTS =====
@@ -67,43 +63,40 @@ from routes.api import api_bp
 app.register_blueprint(api_bp, url_prefix='/api')
 
 
-# ===== REDIRECTION AUTOMATIQUE AU BON DASHBOARD =====
+# ===== REDIRECTION AUTOMATIQUE AU BON DASHBOARD (DÉFINITION UNIQUE) =====
 
 @app.route('/dashboard')
+@login_required # Ajout du décorateur ici pour être sûr
 def dashboard_redirect():
-    """
-    Redirige automatiquement l'utilisateur vers son dashboard
-    selon son rôle (le plus élevé)
-    """
-    if not current_user.is_authenticated:
-        return redirect(url_for('auth.login'))
+    """Redirige automatiquement selon le rôle"""
     
-    # Récupérer le rôle le plus élevé
+    # current_user est garanti d'être authentifié grâce à @login_required
+    
     highest_role = current_user.get_highest_role()
     
     if not highest_role:
-        flash("Vous n'avez pas de rôle assigné. Contactez l'administrateur.", 'error')
+        flash("Vous n'avez pas de rôle assigné.", 'error')
         return redirect(url_for('public.index'))
     
-    role_code = highest_role.code
-    
-    # Redirection selon le rôle
+    # Mapping des rôles vers les dashboards (CORRIGÉ : manager_multi_dept)
     dashboard_routes = {
         'EMPLOYEE': 'dashboard.employee',
         'MANAGER_DEPT': 'dashboard.manager_dept',
-        'MANAGER_MULTI_DEPT': 'dashboard.manager_multi',
+        'MANAGER_MULTI_DEPT': 'dashboard.manager_multi_dept', # <-- CORRIGÉ
         'DIRECTOR_SITE': 'dashboard.director_site',
         'GENERAL_DIRECTOR': 'dashboard.general_director',
         'DPO': 'dashboard.dpo',
         'ADMIN_IT': 'dashboard.admin_it'
     }
     
-    route = dashboard_routes.get(role_code)
+    route = dashboard_routes.get(highest_role.code)
     
     if route:
+        # Ajout d'un log pour confirmer la redirection
+        app.logger.info(f"Redirection de {current_user.email} (Rôle: {highest_role.code}) vers l'endpoint {route}")
         return redirect(url_for(route))
     else:
-        flash(f"Dashboard non trouvé pour le rôle : {role_code}", 'error')
+        flash(f"Dashboard non trouvé pour le rôle : {highest_role.code}", 'error')
         return redirect(url_for('public.index'))
 
 
@@ -150,7 +143,6 @@ def inject_user():
 # ===== LOGGING =====
 
 if not app.debug:
-    # Configuration du logging en production
     import logging
     from logging.handlers import RotatingFileHandler
     
@@ -171,7 +163,6 @@ if not app.debug:
 # ===== DÉMARRAGE DE L'APPLICATION =====
 
 if __name__ == '__main__':
-    # Mode développement
     app.run(
         host='0.0.0.0',
         port=5000,

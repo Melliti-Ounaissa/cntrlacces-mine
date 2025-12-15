@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}Modifier {{ client.full_name }} - VoyagesDZ{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2><i class="fas fa-user-edit"></i> Modifier Client</h2>
+        <hr>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="post">
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Nom complet</strong></label>
+                        <input type="text" name="full_name" class="form-control" 
+                               value="{{ client.full_name }}" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Email</strong></label>
+                        <input type="email" name="email" class="form-control" 
+                               value="{{ client.email }}" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Téléphone</strong></label>
+                        <input type="text" name="phone" class="form-control" 
+                               value="{{ client.phone if client.phone else '' }}" 
+                               placeholder="+213555123456">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Ville</strong></label>
+                        <select name="city" class="form-select">
+                            <option value="">-- Sélectionner une ville --</option>
+                            <option value="Alger" {% if client.city == 'Alger' %}selected{% endif %}>Alger</option>
+                            <option value="Oran" {% if client.city == 'Oran' %}selected{% endif %}>Oran</option>
+                            <option value="Constantine" {% if client.city == 'Constantine' %}selected{% endif %}>Constantine</option>
+                            <option value="Annaba" {% if client.city == 'Annaba' %}selected{% endif %}>Annaba</option>
+                            <option value="Blida" {% if client.city == 'Blida' %}selected{% endif %}>Blida</option>
+                            <option value="Sétif" {% if client.city == 'Sétif' %}selected{% endif %}>Sétif</option>
+                            <option value="Tlemcen" {% if client.city == 'Tlemcen' %}selected{% endif %}>Tlemcen</option>
+                            <option value="Batna" {% if client.city == 'Batna' %}selected{% endif %}>Batna</option>
+                            <option value="Béjaïa" {% if client.city == 'Béjaïa' %}selected{% endif %}>Béjaïa</option>
+                            <option value="Tizi Ouzou" {% if client.city == 'Tizi Ouzou' %}selected{% endif %}>Tizi Ouzou</option>
+                        </select>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> 
+                        <strong>Note :</strong> Le consentement RGPD ne peut pas être modifié ici. 
+                        Pour le révoquer, contactez le DPO.
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Enregistrer les modifications
+                    </button>
+                    <a href="{{ url_for('clients.detail', client_id=client.id) }}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Annuler
+                    </a>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card bg-light">
+            <div class="card-body">
+                <h5 class="card-title">ℹ️ Informations</h5>
+                <p class="mb-2"><strong>Client créé :</strong></p>
+                <p class="small">{{ client.created_at.strftime('%d/%m/%Y à %H:%M') if client.created_at else 'N/A' }}</p>
+                
+                <p class="mb-2 mt-3"><strong>Consentement RGPD :</strong></p>
+                {% if client.rgpd_consent %}
+                    <span class="badge bg-success">✓ Consenti</span>
+                    {% if client.consent_date %}
+                    <p class="small mt-1">Le {{ client.consent_date.strftime('%d/%m/%Y') }}</p>
+                    {% endif %}
+                {% else %}
+                    <span class="badge bg-warning">⚠ Non consenti</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

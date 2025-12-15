@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Créer une réservation - VoyagesDZ{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2><i class="fas fa-plus"></i> Nouvelle Réservation</h2>
+        <hr>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <form method="post">
+            <div class="mb-3">
+                <label class="form-label">Client</label>
+                <select name="client_id" class="form-select" required>
+                    <option value="">Sélectionner un client</option>
+                    {% for client in clients %}
+                    <option value="{{ client.id }}">{{ client.full_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Vol</label>
+                <select name="flight_id" class="form-select" required>
+                    <option value="">Sélectionner un vol</option>
+                    {% for flight in flights %}
+                    <option value="{{ flight.id }}">
+                        {{ flight.flight_number }} - {{ flight.departure_airport }} → {{ flight.arrival_airport }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Montant (DZD)</label>
+                <input type="number" name="total_price" class="form-control" required min="5000">
+                <small class="text-muted">Minimum 5,000 DZD</small>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Date de voyage</label>
+                <input type="date" name="travel_date" class="form-control" required>
+            </div>
+            
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save"></i> Créer la réservation
+            </button>
+            <a href="{{ url_for('bookings.list') }}" class="btn btn-secondary">
+                Annuler
+            </a>
+        </form>
+    </div>
+</div>
+{% endblock %}

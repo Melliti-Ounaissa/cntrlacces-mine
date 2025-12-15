@@ -1,14 +1,14 @@
 """
 routes/clients.py - CRUD Clients avec RBAC
+VERSION CORRIGÉE - Compatible avec le schéma SQL
 """
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, abort
 from flask_login import login_required, current_user
-from models import db, Client, DataProcessingLog
+from models import db, Client
 from policies.rbac import get_clients_query
 from policies.business_rules import ClientRules
 from datetime import datetime
-import uuid
 
 clients_bp = Blueprint('clients', __name__)
 
@@ -30,8 +30,8 @@ def list():
     # Statistiques
     stats = {
         'total': filtered_query.count(),
-        'consented': filtered_query.filter_by(is_personal_data_consented=True).count(),
-        'not_consented': filtered_query.filter_by(is_personal_data_consented=False).count()
+        'consented': filtered_query.filter_by(rgpd_consent=True).count(),
+        'not_consented': filtered_query.filter_by(rgpd_consent=False).count()
     }
     
     return render_template(
@@ -42,7 +42,7 @@ def list():
     )
 
 
-@clients_bp.route('/<client_id>')
+@clients_bp.route('/<int:client_id>')
 @login_required
 def detail(client_id):
     """Détail d'un client"""
@@ -56,20 +56,6 @@ def detail(client_id):
         flash("Vous n'avez pas accès à ce client", 'error')
         abort(403)
     
-    # Logger l'accès aux données personnelles
-    log = DataProcessingLog(
-        id=str(uuid.uuid4()),
-        user_id=current_user.id,
-        client_id=client.id,
-        action='DATA_ACCESSED',
-        resource_type='client',
-        resource_id=client.id,
-        details=f'Consultation du profil client par {current_user.full_name}',
-        ip_address=request.remote_addr
-    )
-    db.session.add(log)
-    db.session.commit()
-    
     return render_template('clients/detail.html', client=client)
 
 
@@ -81,16 +67,11 @@ def create():
     if request.method == 'POST':
         # Récupérer les données
         client_data = {
-            'first_name': request.form.get('first_name'),
-            'last_name': request.form.get('last_name'),
-            'email': request.form.get('email'),
-            'phone': request.form.get('phone'),
-            'passport_number': request.form.get('passport_number'),
-            'date_of_birth': request.form.get('date_of_birth'),
-            'address': request.form.get('address'),
-            'city': request.form.get('city'),
-            'country': request.form.get('country', 'Algérie'),
-            'is_personal_data_consented': request.form.get('consent_checkbox') == 'on'
+            'full_name': request.form.get('full_name', '').strip(),
+            'email': request.form.get('email', '').strip(),
+            'phone': request.form.get('phone', '').strip(),
+            'city': request.form.get('city', '').strip(),
+            'rgpd_consent': request.form.get('consent_checkbox') == 'on'
         }
         
         # Valider les règles métier
@@ -101,48 +82,37 @@ def create():
                 flash(error, 'error')
             return render_template('clients/create.html')
         
+        # Vérifier si l'email existe déjà
+        existing = Client.query.filter_by(email=client_data['email']).first()
+        if existing:
+            flash("Un client avec cet email existe déjà", 'error')
+            return render_template('clients/create.html')
+        
         # Créer le client
         client = Client(
-            id=str(uuid.uuid4()),
-            first_name=client_data['first_name'],
-            last_name=client_data['last_name'],
+            full_name=client_data['full_name'],
             email=client_data['email'],
-            phone=client_data['phone'],
-            passport_number=client_data['passport_number'],
-            date_of_birth=datetime.strptime(client_data['date_of_birth'], '%Y-%m-%d').date() if client_data['date_of_birth'] else None,
-            address=client_data['address'],
-            city=client_data['city'],
-            country=client_data['country'],
-            registered_at_site_id=current_user.site_id,
-            is_personal_data_consented=client_data['is_personal_data_consented'],
-            consent_date=datetime.now() if client_data['is_personal_data_consented'] else None
+            phone=client_data['phone'] if client_data['phone'] else None,
+            city=client_data['city'] if client_data['city'] else None,
+            rgpd_consent=client_data['rgpd_consent'],
+            consent_date=datetime.now() if client_data['rgpd_consent'] else None
         )
         
-        db.session.add(client)
-        
-        # Logger le consentement
-        if client.is_personal_data_consented:
-            log = DataProcessingLog(
-                id=str(uuid.uuid4()),
-                user_id=current_user.id,
-                client_id=client.id,
-                action='CONSENT_GIVEN',
-                resource_type='client',
-                resource_id=client.id,
-                details='Client a donné son consentement lors de l\'inscription',
-                ip_address=request.remote_addr
-            )
-            db.session.add(log)
-        
-        db.session.commit()
-        
-        flash(f'Client {client.first_name} {client.last_name} créé avec succès !', 'success')
-        return redirect(url_for('clients.detail', client_id=client.id))
+        try:
+            db.session.add(client)
+            db.session.commit()
+            
+            flash(f'Client {client.full_name} créé avec succès !', 'success')
+            return redirect(url_for('clients.detail', client_id=client.id))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Erreur lors de la création : {str(e)}', 'error')
+            return render_template('clients/create.html')
     
     return render_template('clients/create.html')
 
 
-@clients_bp.route('/<client_id>/update', methods=['GET', 'POST'])
+@clients_bp.route('/<int:client_id>/update', methods=['GET', 'POST'])
 @login_required
 def update(client_id):
     """Modifier un client"""
@@ -158,36 +128,23 @@ def update(client_id):
     
     if request.method == 'POST':
         # Mettre à jour
-        client.first_name = request.form.get('first_name')
-        client.last_name = request.form.get('last_name')
-        client.email = request.form.get('email')
-        client.phone = request.form.get('phone')
-        client.address = request.form.get('address')
-        client.city = request.form.get('city')
-        client.updated_at = datetime.now()
+        client.full_name = request.form.get('full_name', '').strip()
+        client.email = request.form.get('email', '').strip()
+        client.phone = request.form.get('phone', '').strip()
+        client.city = request.form.get('city', '').strip()
         
-        # Logger la modification
-        log = DataProcessingLog(
-            id=str(uuid.uuid4()),
-            user_id=current_user.id,
-            client_id=client.id,
-            action='DATA_MODIFIED',
-            resource_type='client',
-            resource_id=client.id,
-            details=f'Modification du profil client par {current_user.full_name}',
-            ip_address=request.remote_addr
-        )
-        db.session.add(log)
-        
-        db.session.commit()
-        
-        flash('Client modifié avec succès !', 'success')
-        return redirect(url_for('clients.detail', client_id=client_id))
+        try:
+            db.session.commit()
+            flash('Client modifié avec succès !', 'success')
+            return redirect(url_for('clients.detail', client_id=client_id))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Erreur lors de la modification : {str(e)}', 'error')
     
     return render_template('clients/update.html', client=client)
 
 
-@clients_bp.route('/<client_id>/anonymize', methods=['POST'])
+@clients_bp.route('/<int:client_id>/anonymize', methods=['POST'])
 @login_required
 def anonymize(client_id):
     """
@@ -204,32 +161,18 @@ def anonymize(client_id):
         abort(403)
     
     # Anonymiser
-    client.first_name = "ANONYMISÉ"
-    client.last_name = "ANONYMISÉ"
+    client.full_name = "ANONYMISÉ"
     client.email = f"anonymized_{client.id}@deleted.local"
     client.phone = "+213000000000"
-    client.passport_number = "DELETED"
-    client.address = "ANONYMISÉ"
-    client.is_personal_data_consented = False
+    client.city = "ANONYMISÉ"
+    client.rgpd_consent = False
     client.consent_date = None
-    client.is_anonymized = True
-    client.anonymized_at = datetime.now()
-    client.anonymized_by = current_user.id
     
-    # Logger l'anonymisation
-    log = DataProcessingLog(
-        id=str(uuid.uuid4()),
-        user_id=current_user.id,
-        client_id=client.id,
-        action='DATA_ANONYMIZED',
-        resource_type='client',
-        resource_id=client.id,
-        details=f'Client anonymisé par {current_user.full_name} (Loi 18-07)',
-        ip_address=request.remote_addr
-    )
-    db.session.add(log)
+    try:
+        db.session.commit()
+        flash('Client anonymisé conformément à la Loi 18-07', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Erreur lors de l\'anonymisation : {str(e)}', 'error')
     
-    db.session.commit()
-    
-    flash('Client anonymisé conformément à la Loi 18-07', 'success')
     return redirect(url_for('clients.list'))

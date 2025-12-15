@@ -2,6 +2,7 @@
 policies/business_rules.py - Règles métier (validations)
 
 Contraintes business pour les opérations CRUD
+VERSION CORRIGÉE - Compatible avec le schéma SQL
 """
 
 from datetime import datetime, timedelta
@@ -10,8 +11,8 @@ from datetime import datetime, timedelta
 class BookingRules:
     """Règles métier pour les réservations"""
     
-    MIN_AMOUNT = 5000.0  # DZD
-    MAX_AMOUNT_EMPLOYEE = 500000.0  # DZD
+    MIN_AMOUNT = 5000  # DZD
+    MAX_AMOUNT_EMPLOYEE = 500000  # DZD
     MIN_ADVANCE_DAYS = 3  # Jours minimum avant voyage
     MIN_TRAVELERS = 1
     MAX_TRAVELERS = 50
@@ -29,9 +30,9 @@ class BookingRules:
         errors = []
         
         # 1. Montant minimum
-        amount = float(booking_data.get('total_amount_dzd', 0))
+        amount = int(booking_data.get('total_price', 0))
         if amount < BookingRules.MIN_AMOUNT:
-            errors.append(f"Montant minimum : {BookingRules.MIN_AMOUNT:,.0f} DZD")
+            errors.append(f"Montant minimum : {BookingRules.MIN_AMOUNT:,} DZD")
         
         # 2. Montant maximum pour EMPLOYEE
         highest_role = creator.get_highest_role()
@@ -39,7 +40,7 @@ class BookingRules:
             if amount > BookingRules.MAX_AMOUNT_EMPLOYEE:
                 errors.append(
                     f"En tant qu'employé, vous ne pouvez pas créer "
-                    f"de réservation > {BookingRules.MAX_AMOUNT_EMPLOYEE:,.0f} DZD. "
+                    f"de réservation > {BookingRules.MAX_AMOUNT_EMPLOYEE:,} DZD. "
                     f"Contactez votre manager."
                 )
         
@@ -47,7 +48,11 @@ class BookingRules:
         travel_date = booking_data.get('travel_date')
         if travel_date:
             if isinstance(travel_date, str):
-                travel_date = datetime.strptime(travel_date, '%Y-%m-%d').date()
+                try:
+                    travel_date = datetime.strptime(travel_date, '%Y-%m-%d').date()
+                except ValueError:
+                    errors.append("Format de date invalide (YYYY-MM-DD requis)")
+                    return len(errors) == 0, errors
             
             if travel_date <= datetime.now().date():
                 errors.append("La date de voyage doit être dans le futur")
@@ -60,14 +65,6 @@ class BookingRules:
                     f"{BookingRules.MIN_ADVANCE_DAYS} jours à l'avance"
                 )
         
-        # 5. Nombre de voyageurs
-        travelers = int(booking_data.get('number_of_travelers', 1))
-        if not (BookingRules.MIN_TRAVELERS <= travelers <= BookingRules.MAX_TRAVELERS):
-            errors.append(
-                f"Nombre de voyageurs : entre {BookingRules.MIN_TRAVELERS} "
-                f"et {BookingRules.MAX_TRAVELERS}"
-            )
-        
         return len(errors) == 0, errors
     
     @staticmethod
@@ -76,7 +73,7 @@ class BookingRules:
         Vérifie si une réservation peut être modifiée
         """
         # Pas de modification si confirmée et < 48h avant voyage
-        if booking.status == 'confirmed':
+        if booking.status in ['CONFIRMED', 'confirmed']:
             if booking.travel_date:
                 time_until_travel = booking.travel_date - datetime.now().date()
                 if time_until_travel.days < 2:
@@ -90,24 +87,23 @@ class BookingRules:
         Calcule les frais d'annulation
         """
         if not booking.travel_date:
-            return 0.0
+            return 0
         
         time_until_travel = booking.travel_date - datetime.now().date()
         
         if time_until_travel.days < BookingRules.CANCELLATION_DEADLINE_DAYS:
             # Frais 50% si annulation tardive
-            fee = float(booking.total_amount_dzd) * BookingRules.CANCELLATION_FEE_PERCENT
+            fee = int(booking.total_price) * BookingRules.CANCELLATION_FEE_PERCENT
             return fee
         
         # Pas de frais si annulation ≥ 7 jours avant
-        return 0.0
+        return 0
 
 
 class ClientRules:
     """Règles métier pour les clients"""
     
     MIN_AGE = 18
-    PASSPORT_VALIDITY_MONTHS = 6
     
     @staticmethod
     def validate_create(client_data):
@@ -117,26 +113,26 @@ class ClientRules:
         errors = []
         
         # 1. Consentement RGPD obligatoire
-        if not client_data.get('is_personal_data_consented'):
+        if not client_data.get('rgpd_consent'):
             errors.append(
                 "Le client doit donner son consentement pour le traitement "
                 "de ses données personnelles (Loi 18-07)"
             )
         
-        # 2. Âge minimum
-        dob = client_data.get('date_of_birth')
-        if dob:
-            if isinstance(dob, str):
-                dob = datetime.strptime(dob, '%Y-%m-%d').date()
-            
-            age = (datetime.now().date() - dob).days // 365
-            if age < ClientRules.MIN_AGE:
-                errors.append(f"Le client doit avoir au moins {ClientRules.MIN_AGE} ans")
-        
-        # 3. Téléphone algérien
+        # 2. Téléphone algérien (optionnel mais si fourni)
         phone = client_data.get('phone', '')
         if phone and not phone.startswith('+213'):
             errors.append("Le téléphone doit commencer par +213 (Algérie)")
+        
+        # 3. Email valide
+        email = client_data.get('email', '')
+        if not email or '@' not in email:
+            errors.append("Email valide requis")
+        
+        # 4. Nom complet requis
+        full_name = client_data.get('full_name', '').strip()
+        if not full_name or len(full_name) < 3:
+            errors.append("Nom complet requis (minimum 3 caractères)")
         
         return len(errors) == 0, errors
 
@@ -144,7 +140,7 @@ class ClientRules:
 class PaymentRules:
     """Règles métier pour les paiements"""
     
-    MAX_AMOUNT_FINANCE_MANAGER = 100000.0  # DZD
+    MAX_AMOUNT_FINANCE_MANAGER = 100000  # DZD
     PAYMENT_DEADLINE_HOURS = 48
     
     @staticmethod
@@ -155,12 +151,12 @@ class PaymentRules:
         errors = []
         
         # 1. Montant = montant de la réservation
-        payment_amount = float(payment_data.get('amount_dzd', 0))
-        if abs(payment_amount - float(booking.total_amount_dzd)) > 0.01:
+        payment_amount = int(payment_data.get('amount', 0))
+        if abs(payment_amount - int(booking.total_price)) > 0:
             errors.append(
-                f"Le montant du paiement ({payment_amount:,.2f} DZD) doit "
+                f"Le montant du paiement ({payment_amount:,} DZD) doit "
                 f"correspondre au montant de la réservation "
-                f"({booking.total_amount_dzd:,.2f} DZD)"
+                f"({booking.total_price:,} DZD)"
             )
         
         # 2. Montant max pour Manager Finance
@@ -170,7 +166,7 @@ class PaymentRules:
                 if payment_amount > PaymentRules.MAX_AMOUNT_FINANCE_MANAGER:
                     errors.append(
                         f"En tant que Manager Finance, vous ne pouvez traiter "
-                        f"un paiement > {PaymentRules.MAX_AMOUNT_FINANCE_MANAGER:,.0f} DZD. "
+                        f"un paiement > {PaymentRules.MAX_AMOUNT_FINANCE_MANAGER:,} DZD. "
                         f"Contactez le directeur."
                     )
         
@@ -178,7 +174,7 @@ class PaymentRules:
         from models import Payment
         existing = Payment.query.filter(
             Payment.booking_id == booking.id,
-            Payment.status == 'completed'
+            Payment.status == 'COMPLETED'
         ).first()
         
         if existing:

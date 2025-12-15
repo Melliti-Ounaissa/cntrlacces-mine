@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block title %}Client {{ client.full_name }} - VoyagesDZ{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2><i class="fas fa-user"></i> Client {{ client.full_name }}</h2>
+        <hr>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Informations personnelles</h5>
+                
+                <table class="table">
+                    <tr>
+                        <th width="200">Nom complet</th>
+                        <td><strong>{{ client.full_name }}</strong></td>
+                    </tr>
+                    <tr>
+                        <th>Email</th>
+                        <td>{{ client.email }}</td>
+                    </tr>
+                    <tr>
+                        <th>Téléphone</th>
+                        <td>{{ client.phone if client.phone else 'Non renseigné' }}</td>
+                    </tr>
+                    <tr>
+                        <th>Ville</th>
+                        <td>{{ client.city if client.city else 'Non renseignée' }}</td>
+                    </tr>
+                    <tr>
+                        <th>Consentement RGPD</th>
+                        <td>
+                            {% if client.rgpd_consent %}
+                                <span class="badge bg-success">✓ Consenti</span>
+                                {% if client.consent_date %}
+                                <br><small class="text-muted">Le {{ client.consent_date.strftime('%d/%m/%Y') }}</small>
+                                {% endif %}
+                            {% else %}
+                                <span class="badge bg-warning">⚠ Non consenti</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Client depuis</th>
+                        <td>{{ client.created_at.strftime('%d/%m/%Y') if client.created_at else 'N/A' }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-body">
+                <h5 class="card-title">Réservations du client</h5>
+                {% if client.bookings %}
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Référence</th>
+                            <th>Date</th>
+                            <th>Montant</th>
+                            <th>Statut</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for booking in client.bookings[:10] %}
+                        <tr>
+                            <td><a href="{{ url_for('bookings.detail', booking_id=booking.id) }}">{{ booking.booking_reference }}</a></td>
+                            <td>{{ booking.created_at.strftime('%d/%m/%Y') }}</td>
+                            <td>{{ "{:,}".format(booking.total_price) }} DZD</td>
+                            <td>
+                                <span class="badge bg-{{ 'warning' if booking.status == 'PENDING' else 'success' if booking.status == 'CONFIRMED' else 'danger' }}">
+                                    {{ booking.status }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p class="text-muted">Aucune réservation pour ce client</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Actions</h5>
+                
+                <a href="{{ url_for('clients.update', client_id=client.id) }}" class="btn btn-warning btn-sm w-100 mb-2">
+                    <i class="fas fa-edit"></i> Modifier
+                </a>
+                
+                {% if not client.rgpd_consent %}
+                <div class="alert alert-warning small">
+                    ⚠️ Ce client n'a pas donné son consentement RGPD
+                </div>
+                {% endif %}
+                
+                {% if current_user.has_role('DPO') or current_user.has_role('GENERAL_DIRECTOR') %}
+                <hr>
+                <h6 class="text-danger">Zone DPO</h6>
+                <form method="post" action="{{ url_for('clients.anonymize', client_id=client.id) }}" 
+                      onsubmit="return confirm('Êtes-vous sûr de vouloir anonymiser ce client ? Cette action est IRRÉVERSIBLE.')">
+                    <button type="submit" class="btn btn-danger btn-sm w-100">
+                        <i class="fas fa-user-secret"></i> Anonymiser (Loi 18-07)
+                    </button>
+                </form>
+                <small class="text-muted">Droit à l'oubli</small>
+                {% endif %}
+                
+                <hr>
+                <a href="{{ url_for('clients.list') }}" class="btn btn-outline-dark btn-sm w-100">
+                    <i class="fas fa-arrow-left"></i> Retour à la liste
+                </a>
+            </div>
+        </div>
+        
+        <div class="card mt-3 bg-light">
+            <div class="card-body">
+                <h6>📊 Statistiques</h6>
+                <p class="mb-1"><strong>Réservations :</strong> {{ client.bookings|length }}</p>
+                <p class="mb-0"><strong>CA total :</strong> {{ "{:,}".format(client.bookings|sum(attribute='total_price')) if client.bookings else 0 }} DZD</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

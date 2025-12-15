@@ -11,6 +11,10 @@ from datetime import datetime
 auth_bp = Blueprint('auth', __name__)
 
 
+# routes/auth.py
+
+# ... (les imports)
+
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
     """Page de connexion"""
@@ -20,8 +24,9 @@ def login():
         return redirect(url_for('dashboard_redirect'))
     
     if request.method == 'POST':
-        email = request.form.get('email')
-        password = request.form.get('password')
+        # FIX: Utiliser .strip() pour enlever les espaces inutiles qui causent des erreurs de hash
+        email = request.form.get('email').strip()      # <--- MODIFICATION
+        password = request.form.get('password').strip() # <--- MODIFICATION
         remember = request.form.get('remember', False)
         
         # Vérification
@@ -29,31 +34,23 @@ def login():
             flash('Veuillez remplir tous les champs', 'error')
             return render_template('login.html')
         
+        # AJOUT TEMPORAIRE POUR DEBUG
+        print(f"DEBUG LOGIN: Email saisi: '{email}', Password saisi (non-hashed): '{password}'") 
+
         # Chercher l'utilisateur
         user = User.query.filter_by(email=email).first()
         
         if not user or not check_password_hash(user.password_hash, password):
+            # Le mot de passe ne correspond pas ou l'utilisateur n'existe pas
             flash('Email ou mot de passe incorrect', 'error')
             return render_template('login.html')
         
-        # Vérifier si le compte est actif
-        if not user.is_active:
-            flash('Votre compte a été désactivé. Contactez l\'administrateur.', 'error')
-            return render_template('login.html')
-        
-        # Connexion réussie
+        # Si la vérification a réussi, continuez...
         login_user(user, remember=remember)
-        
-        # Redirection vers la page demandée ou le dashboard
-        next_page = request.args.get('next')
-        if next_page:
-            return redirect(next_page)
-        
-        flash(f'Bienvenue {user.full_name} !', 'success')
-        return redirect(url_for('dashboard_redirect'))
+        flash(f'Connexion réussie ! Bienvenue {user.full_name}.', 'success')
+        return redirect(url_for('dashboard_redirect')) # Redirection vers la fonction dans app.py
     
     return render_template('login.html')
-
 
 @auth_bp.route('/logout')
 @login_required
@@ -102,7 +99,7 @@ def register():
         new_user = User(
             email=email,
             full_name=full_name,
-            password_hash=generate_password_hash(password),
+            password_hash=generate_password_hash(password), 
             is_active=True
         )
         
