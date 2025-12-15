@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block title %}Clients - VoyagesDZ{% endblock %}
+
+{% block content %}
+<div class="vz-page-head">
+    <div>
+        <h2>👥 Clients</h2>
+        <p style="color: var(--text-muted);">Liste des clients de l'agence</p>
+    </div>
+    <div class="vz-actions">
+        <a href="{{ url_for('clients.create') }}" class="vz-btn vz-primary">
+            + Nouveau Client
+        </a>
+    </div>
+</div>
+
+<hr>
+
+<!-- Statistiques -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 24px;">
+    <div style="background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px;">
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 4px;">Total Clients</div>
+        <div style="font-size: 28px; font-weight: 800;">{{ stats.total }}</div>
+    </div>
+    <div style="background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px;">
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 4px;">Avec Consentement</div>
+        <div style="font-size: 28px; font-weight: 800; color: #4ade80;">{{ stats.consented }}</div>
+    </div>
+    <div style="background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px;">
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 4px;">Sans Consentement</div>
+        <div style="font-size: 28px; font-weight: 800; color: #fb923c;">{{ stats.not_consented }}</div>
+    </div>
+</div>
+
+<!-- Table -->
+<div style="background: #fff; border: 1px solid var(--line); border-radius: 14px; overflow: hidden;">
+    <table style="width: 100%; border-collapse: collapse;">
+        <thead style="background: var(--rose-deep); color: #fff;">
+            <tr>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Nom Complet</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Email</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Téléphone</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Ville</th>
+                <th style="padding: 12px; text-align: center; font-weight: 600;">RGPD</th>
+                <th style="padding: 12px; text-align: center; font-weight: 600;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for client in clients %}
+            <tr style="border-bottom: 1px solid var(--line); transition: background 0.15s;">
+                <td style="padding: 12px; font-weight: 600;">{{ client.full_name }}</td>
+                <td style="padding: 12px; color: var(--text-muted);">{{ client.email }}</td>
+                <td style="padding: 12px;">{{ client.phone if client.phone else '-' }}</td>
+                <td style="padding: 12px;">{{ client.city if client.city else '-' }}</td>
+                <td style="padding: 12px; text-align: center;">
+                    {% if client.rgpd_consent %}
+                        <span style="display: inline-block; padding: 4px 10px; border-radius: 999px; background: #dcfce7; color: #15803d; font-size: 12px; font-weight: 600;">✓ Consenti</span>
+                    {% else %}
+                        <span style="display: inline-block; padding: 4px 10px; border-radius: 999px; background: #fed7aa; color: #9a3412; font-size: 12px; font-weight: 600;">⚠ Non</span>
+                    {% endif %}
+                </td>
+                <td style="padding: 12px; text-align: center;">
+                    <a href="{{ url_for('clients.detail', client_id=client.id) }}" 
+                       style="display: inline-block; padding: 6px 12px; border-radius: 8px; background: var(--rose-main); color: #fff; text-decoration: none; font-size: 13px; font-weight: 600;">
+                        Voir
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Pagination -->
+{% if pagination.pages > 1 %}
+<div style="display: flex; justify-content: center; gap: 8px; margin-top: 20px;">
+    {% if pagination.has_prev %}
+    <a href="{{ url_for('clients.list', page=pagination.prev_num) }}" 
+       style="padding: 8px 14px; border-radius: 8px; border: 1px solid var(--line); background: #fff; text-decoration: none; color: var(--text-main); font-weight: 600;">
+        ← Précédent
+    </a>
+    {% endif %}
+    
+    <span style="padding: 8px 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--rose-main); color: #fff; font-weight: 600;">
+        Page {{ pagination.page }} / {{ pagination.pages }}
+    </span>
+    
+    {% if pagination.has_next %}
+    <a href="{{ url_for('clients.list', page=pagination.next_num) }}" 
+       style="padding: 8px 14px; border-radius: 8px; border: 1px solid var(--line); background: #fff; text-decoration: none; color: var(--text-main); font-weight: 600;">
+        Suivant →
+    </a>
+    {% endif %}
+</div>
+{% endif %}
+
+{% endblock %}

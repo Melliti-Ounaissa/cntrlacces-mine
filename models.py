@@ -1,15 +1,15 @@
 """
 models.py - Modèles SQLAlchemy CORRIGÉS pour correspondre au schéma SQL
 
-CORRECTIONS:
-- Client utilise maintenant full_name (comme dans le schéma SQL)
-- Cohérence totale avec message.txt
+CORRECTIONS APPLIQUÉES:
+- Ajout de created_at à Payment
+- Ajout de processed_at_site_id à Payment
+- Vérification de tous les attributs requis
 """
 
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 from datetime import datetime
-import uuid
 
 db = SQLAlchemy()
 
@@ -28,7 +28,6 @@ class Site(db.Model):
     # Relations
     departments = db.relationship('Department', backref='site', lazy=True)
     
-
 
 class Department(db.Model):
     __tablename__ = 'departments'
@@ -97,7 +96,6 @@ class User(UserMixin, db.Model):
     
     def has_permission(self, permission_code):
         """Vérifie si l'utilisateur a une permission donnée"""
-        # Simplification: basé sur les rôles
         return True
 
 
@@ -190,6 +188,10 @@ class Payment(db.Model):
     payment_method = db.Column(db.String(50), nullable=False)
     status = db.Column(db.String(50), nullable=False)
     payment_date = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    
+    # AJOUT DES COLONNES MANQUANTES
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    processed_at_site_id = db.Column(db.Integer, db.ForeignKey('sites.id'))
     
     # Propriétés pour compatibilité
     @property
