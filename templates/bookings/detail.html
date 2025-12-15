@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block title %}Réservation {{ booking.booking_reference }} - VoyagesDZ{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2 class="mb-3">
+            <i class="fas fa-ticket-alt"></i> Détail Réservation {{ booking.booking_reference }}
+            <span class="badge bg-{{ booking.status | lower_status_class }} float-end">{{ booking.status }}</span>
+        </h2>
+        <p class="text-muted">Créée le {{ booking.created_at.strftime('%d/%m/%Y à %H:%M') }} par {{ booking.creator.full_name }}</p>
+        <hr>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white"><i class="fas fa-info-circle"></i> Informations Générales</div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5>Client</h5>
+                        <ul class="list-unstyled">
+                            <li><strong>Nom :</strong> <a href="{{ url_for('clients.detail', client_id=booking.client.id) }}">{{ booking.client.full_name }}</a></li>
+                            <li><strong>Email :</strong> {{ booking.client.email }}</li>
+                            <li><strong>Téléphone :</strong> {{ booking.client.phone }}</li>
+                            <li><strong>Ville :</strong> {{ booking.client.city }}</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h5>Vol</h5>
+                        <ul class="list-unstyled">
+                            <li><strong>N° Vol :</strong> {{ booking.flight.flight_number }}</li>
+                            <li><strong>Compagnie :</strong> {{ booking.flight.airline }}</li>
+                            <li><strong>Départ :</strong> {{ booking.flight.departure_airport }}</li>
+                            <li><strong>Arrivée :</strong> {{ booking.flight.arrival_airport }}</li>
+                            <li><strong>Date :</strong> {{ booking.flight.departure_date.strftime('%d/%m/%Y %H:%M') }}</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header bg-info text-white"><i class="fas fa-money-check-alt"></i> Finances</div>
+            <div class="card-body">
+                <p class="h4">Montant Total : <span class="text-success">{{ "{:,.2f}".format(booking.total_price) }} DZD</span></p>
+                <h6 class="mt-4">Historique des Paiements (Total Payé: {{ "{:,.2f}".format(booking.payments | sum(attribute='amount') | default(0)) }} DZD)</h6>
+                
+                {% if booking.payments %}
+                <table class="table table-sm table-striped">
+                    <thead>
+                        <tr>
+                            <th>Référence</th>
+                            <th>Montant</th>
+                            <th>Méthode</th>
+                            <th>Statut</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for payment in booking.payments %}
+                        <tr>
+                            <td>{{ payment.transaction_reference }}</td>
+                            <td>{{ "{:,.2f}".format(payment.amount_dzd) }} DZD</td>
+                            <td>{{ payment.payment_method }}</td>
+                            <td><span class="badge bg-{{ payment.status | lower_status_class }}">{{ payment.status }}</span></td>
+                            <td>{{ payment.payment_date.strftime('%d/%m/%Y') }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p class="text-muted">Aucun paiement enregistré pour cette réservation.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card bg-light mb-4">
+            <div class="card-body">
+                <h5 class="card-title">⚙️ Actions Disponibles</h5>
+                
+                {% if can_update %}
+                    <a href="{{ url_for('bookings.update', booking_id=booking.id) }}" class="btn btn-warning btn-sm w-100 mb-2">
+                        <i class="fas fa-edit"></i> Modifier Réservation
+                    </a>
+                {% else %}
+                    <button type="button" class="btn btn-warning btn-sm w-100 mb-2" disabled data-bs-toggle="tooltip" title="{{ update_msg }}">
+                        <i class="fas fa-edit"></i> Modifier Réservation (Interdit)
+                    </button>
+                    <p class="text-danger small">{{ update_msg }}</p>
+                {% endif %}
+                
+                {% if can_delete %}
+                    <form method="POST" action="{{ url_for('bookings.delete', booking_id=booking.id) }}" 
+                          onsubmit="return confirm('Êtes-vous sûr de vouloir annuler la réservation {{ booking.booking_reference }} ? Des frais peuvent s\'appliquer.')" class="d-grid gap-2">
+                        <button type="submit" class="btn btn-danger btn-sm">
+                            <i class="fas fa-times-circle"></i> Annuler Réservation
+                        </button>
+                    </form>
+                {% else %}
+                    <button type="button" class="btn btn-danger btn-sm w-100 mt-2" disabled data-bs-toggle="tooltip" title="{{ delete_msg }}">
+                        <i class="fas fa-times-circle"></i> Annuler Réservation (Interdit)
+                    </button>
+                    <p class="text-danger small">{{ delete_msg }}</p>
+                {% endif %}
+                
+                <hr>
+                <p class="small text-muted mb-0">Les actions sont soumises aux règles métier et à votre rôle/département (RBAC).</p>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">🏢 Contexte de Création</h5>
+                <ul class="list-unstyled small">
+                    <li><strong>Département :</strong> {{ booking.created_department.name }}</li>
+                    <li><strong>Site :</strong> {{ booking.created_at_site_id }} (ID)</li>
+                    <li><strong>Créateur ID :</strong> {{ booking.created_by_user_id }}</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    // Ajout d'une fonction utilitaire pour déterminer la classe de statut (si non défini globalement)
+    function lower_status_class(status) {
+        if (!status) return 'secondary';
+        const lower = status.toLowerCase();
+        if (lower === 'confirmed') return 'success';
+        if (lower === 'pending') return 'warning';
+        if (lower === 'cancelled') return 'danger';
+        return 'secondary';
+    }
+
+    // Activer les tooltips Bootstrap
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+      return new bootstrap.Tooltip(tooltipTriggerEl)
+    })
+</script>
+{% endblock %}

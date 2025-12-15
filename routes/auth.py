@@ -34,8 +34,6 @@ def login():
             flash('Veuillez remplir tous les champs', 'error')
             return render_template('login.html')
         
-        # AJOUT TEMPORAIRE POUR DEBUG
-        print(f"DEBUG LOGIN: Email saisi: '{email}', Password saisi (non-hashed): '{password}'") 
 
         # Chercher l'utilisateur
         user = User.query.filter_by(email=email).first()

@@ -29,7 +29,7 @@ login_manager.login_message = 'Veuillez vous connecter pour accéder à cette pa
 @login_manager.user_loader
 def load_user(user_id):
     """Charge un utilisateur depuis la BD"""
-    return User.query.get(int(user_id))
+    return db.session.get(User, int(user_id))
 
 
 # ===== ENREGISTREMENT DES BLUEPRINTS =====
@@ -63,41 +63,69 @@ from routes.api import api_bp
 app.register_blueprint(api_bp, url_prefix='/api')
 
 
+# ... après l'enregistrement des Blueprints ...
+
+# ===== FILTRES JINJA2 PERSONNALISÉS =====
+
+def get_status_class(status):
+    """Retourne une classe CSS Bootstrap basée sur le statut."""
+    if not status:
+        return 'secondary'
+    status_lower = status.lower()
+    
+    if status_lower == 'confirmed' or status_lower == 'completed':
+        return 'success'
+    elif status_lower == 'pending' or status_lower == 'in_progress':
+        return 'warning'
+    elif status_lower == 'cancelled' or status_lower == 'failed':
+        return 'danger'
+    else:
+        return 'secondary'
+
+# Enregistrer le filtre sous le nom 'lower_status_class' (le nom utilisé dans le template)
+# Le dictionnaire 'filters' de jinja_env doit être utilisé
+app.jinja_env.filters['lower_status_class'] = get_status_class 
+# ... le reste du fichier app.py (gestionnaires d'erreurs, context processors, logging, etc.)
+
 # ===== REDIRECTION AUTOMATIQUE AU BON DASHBOARD (DÉFINITION UNIQUE) =====
 
-@app.route('/dashboard')
-@login_required # Ajout du décorateur ici pour être sûr
+# app.py (Ajoutez cette fonction après vos autres routes/blueprints)
+
+@app.route('/dashboard_redirect')
+@login_required
 def dashboard_redirect():
-    """Redirige automatiquement selon le rôle"""
-    
-    # current_user est garanti d'être authentifié grâce à @login_required
-    
+    """
+    Détermine la page de tableau de bord appropriée en fonction du rôle le plus élevé.
+    """
     highest_role = current_user.get_highest_role()
     
-    if not highest_role:
-        flash("Vous n'avez pas de rôle assigné.", 'error')
-        return redirect(url_for('public.index'))
-    
-    # Mapping des rôles vers les dashboards (CORRIGÉ : manager_multi_dept)
-    dashboard_routes = {
-        'EMPLOYEE': 'dashboard.employee',
-        'MANAGER_DEPT': 'dashboard.manager_dept',
-        'MANAGER_MULTI_DEPT': 'dashboard.manager_multi_dept', # <-- CORRIGÉ
-        'DIRECTOR_SITE': 'dashboard.director_site',
-        'GENERAL_DIRECTOR': 'dashboard.general_director',
-        'DPO': 'dashboard.dpo',
-        'ADMIN_IT': 'dashboard.admin_it'
-    }
-    
-    route = dashboard_routes.get(highest_role.code)
-    
-    if route:
-        # Ajout d'un log pour confirmer la redirection
-        app.logger.info(f"Redirection de {current_user.email} (Rôle: {highest_role.code}) vers l'endpoint {route}")
-        return redirect(url_for(route))
-    else:
-        flash(f"Dashboard non trouvé pour le rôle : {highest_role.code}", 'error')
-        return redirect(url_for('public.index'))
+    if highest_role:
+        role_code = highest_role.code
+        
+        if role_code == "GENERAL_DIRECTOR":
+            # Redirection vers le dashboard DG
+            return redirect(url_for('dashboard.general_director'))
+        elif role_code == "DPO":
+            return redirect(url_for('dashboard.dpo'))
+        elif role_code == "ADMIN_IT":
+            return redirect(url_for('dashboard.admin_it'))
+            
+        elif role_code == "DIRECTOR_SITE":
+            return redirect(url_for('dashboard.site_director'))
+            
+        elif role_code == "MANAGER_DEPT":
+            return redirect(url_for('dashboard.manager'))
+            
+        elif role_code == "EMPLOYEE":
+            return redirect(url_for('dashboard.employee'))
+            
+    # Si l'utilisateur n'a aucun rôle défini, le renvoyer à l'accueil
+    flash("Vous n'avez pas de rôle défini pour accéder au tableau de bord.", 'error')
+    return redirect(url_for('public.index'))
+
+# NOTE: Assurez-vous que cette fonction est bien disponible sous le nom 'dashboard_redirect'
+# Si vous utilisez un Blueprint pour 'dashboard', vous pouvez la mettre dedans
+# avec l'URL '/' et la fonction serait dashboard.dashboard_redirect
 
 
 # ===== GESTION DES ERREURS =====
@@ -158,6 +186,8 @@ if not app.debug:
     
     app.logger.setLevel(logging.INFO)
     app.logger.info('VoyagesDZ startup')
+
+
 
 
 # ===== DÉMARRAGE DE L'APPLICATION =====

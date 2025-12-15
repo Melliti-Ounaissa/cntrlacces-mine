@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block title %}Accès Interdit (403) - VoyagesDZ{% endblock %}
+
+{% block content %}
+<div style="text-align: center; padding: 50px;">
+    <h1>Accès Interdit</h1>
+    <h2 style="color: var(--pink-dark);">Erreur 403</h2>
+    <p style="margin-top: 20px; font-size: 1.1em;">
+        Vous n'avez pas la permission d'accéder à la ressource demandée.<br>
+        Votre rôle actuel n'est pas autorisé pour cette page.
+    </p>
+    <a href="{{ url_for('dashboard_redirect') }}" class="vz-btn vz-primary" style="margin-top: 30px;">
+        Retour au Tableau de Bord
+    </a>
+</div>
+{% endblock %}

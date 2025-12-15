@@ -1,6 +1,6 @@
 """
 routes/dashboard.py - 7 Dashboards selon les rôles
-VERSION CORRIGÉE ET COMPLÈTE
+VERSION CORRIGÉE - Fix JSON serialization
 """
 
 from flask import Blueprint, render_template, abort
@@ -75,10 +75,10 @@ def manager_dept():
     # Dernières réservations
     recent_bookings = dept_bookings.order_by(Booking.created_at.desc()).limit(20).all()
     
-    # CA mensuel (données fictives pour démo)
+    # CA mensuel (données fictives pour démo) - FIX: Utiliser des listes au lieu de dict.values()
     monthly_ca = {
         'labels': ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun'],
-        'values': [320000, 450000, 380000, 510000, 470000, 620000]
+        'data': [320000, 450000, 380000, 510000, 470000, 620000]  # Changed from 'values' to 'data'
     }
     
     # Si Finance : Stats paiements
@@ -104,7 +104,7 @@ def manager_dept():
 
 @dashboard_bp.route('/manager-multi')
 @login_required
-def manager_multi():
+def manager_multi_dept():
     """
     Dashboard MANAGER MULTI-DÉPARTEMENTS
     Voit : 2-3 départements sur son site

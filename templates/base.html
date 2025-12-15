@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>{% block title %}VoyagesDZ{% endblock %}</title>
-
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
   <script defer src="{{ url_for('static', filename='js/main.js') }}"></script>
 </head>
@@ -37,7 +37,8 @@
     <aside class="vz-sidebar">
       <nav class="vz-nav">
         <a href="{{ url_for('public.index') }}" class="{% if request.path == '/' %}active{% endif %}">Accueil</a>
-        <a href="{{ url_for('dashboard.employee') }}" class="{% if 'dashboard' in request.path %}active{% endif %}">Dashboard</a>
+
+        <a href="{{ url_for('dashboard_redirect') }}" class="{% if 'dashboard' in request.path %}active{% endif %}">Dashboard</a>
 
         <div class="vz-nav-title">Modules</div>
         <a href="{{ url_for('bookings.list') }}" class="{% if 'bookings' in request.path %}active{% endif %}">Réservations</a>

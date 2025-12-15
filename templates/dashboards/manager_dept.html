@@ -158,7 +158,7 @@
         <canvas id="caChart"
                 data-chart="line"
                 data-labels='{{ monthly_ca.labels|tojson }}'
-                data-values='{{ monthly_ca.values|tojson }}'>
+                data-values='{{ monthly_ca.data|tojson }}'>
         </canvas>
         {% else %}
         <p class="text-muted">Données mensuelles non disponibles</p>
@@ -203,7 +203,7 @@
                 {% for b in recent_bookings %}
                 <tr>
                     <td>{{ b.booking_reference }}</td>
-                    <td>{% if b.client %}{{ b.client.first_name }} {{ b.client.last_name }}{% else %}N/A{% endif %}</td>
+                    <td>{% if b.client %}{{ b.client.full_name }}{% else %}N/A{% endif %}</td>
                     <td>{{ b.travel_date if b.travel_date else 'N/A' }}</td>
                     <td>{{ "{:,.2f}".format(b.total_amount_dzd) if b.total_amount_dzd else "0.00" }} DZD</td>
                     <td>
