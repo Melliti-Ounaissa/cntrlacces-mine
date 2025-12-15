@@ -72,7 +72,7 @@ def get_bookings_query(user, base_query):
 
 def get_clients_query(user, base_query):
     """Filtre les clients selon le rôle RBAC"""
-    from models import Client
+    from models import Client, db
     
     highest_role = user.get_highest_role()
     if not highest_role:
@@ -80,25 +80,67 @@ def get_clients_query(user, base_query):
     
     role_code = highest_role.code
     
+    # EMPLOYEE : Accès limité
     if role_code == "EMPLOYEE":
-        # Employé : Clients de son site uniquement
+        # Option 1: Retourner les clients liés aux réservations de l'employé
+        # Via une sous-requête
+        from models import Booking
+        from sqlalchemy import exists
+        
+        # Sous-requête : réservations de cet employé
+        subquery = Booking.query.filter(
+            Booking.created_by_user_id == user.id
+        ).subquery()
+        
+        # Clients qui ont des réservations créées par cet employé
         return base_query.filter(
-            Client.registered_at_site_id == user.site_id
+            Client.id.in_(
+                db.session.query(subquery.c.client_id)
+            )
         )
+        
+        # Alternative simplifiée : limiter par date (moins sécurisé)
+        # return base_query.filter(
+        #     Client.created_at >= datetime.now() - timedelta(days=365)
+        # )
     
     elif role_code in ["MANAGER_DEPT", "MANAGER_MULTI_DEPT", "DIRECTOR_SITE"]:
-        # Managers et Directeurs : Clients de leur site
+        # Managers et Directeurs : Clients liés à leur site
+        # Option 1: Via les réservations du site
+        from models import Booking
+        
+        # Sous-requête : réservations du site
+        subquery = Booking.query.filter(
+            Booking.created_at_site_id == user.site_id
+        ).subquery()
+        
+        # Clients qui ont des réservations de ce site
         return base_query.filter(
-            Client.registered_at_site_id == user.site_id
+            Client.id.in_(
+                db.session.query(subquery.c.client_id)
+            )
         )
+        
+        # Alternative : tous les clients (pas idéal)
+        # return base_query
     
     elif role_code in ["GENERAL_DIRECTOR", "ADMIN_IT", "DPO"]:
-        # Accès complet
+        # Accès complet pour DG, Admin IT et DPO
         return base_query
     
     else:
+        # Par défaut : accès limité comme un employé
+        from models import Booking
+        from sqlalchemy import exists
+        
+        subquery = Booking.query.filter(
+            Booking.created_by_user_id == user.id
+        ).subquery()
+        
         return base_query.filter(
-            Client.registered_at_site_id == user.site_id
+            Client.id.in_(
+                db.session.query(subquery.c.client_id)
+            )
         )
 
 
